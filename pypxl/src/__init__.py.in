@@ -1,0 +1,47 @@
+__all__ = ['core', 'hep', 'modules' @PYPYL_MODULE_ASTRO@ @PYPYL_MODULE_PLUGINS@]
+version = "@PXL_VERSION@"
+
+#
+# fix for vector.i "swig:stop_iteration" bug
+#
+# to avoid conflict with numpy interface, it is necessary to initialize numpy with std dlopen flags.
+# However, if not imported here, numpy will be initiailzed in the swig import, which may causes segfault 
+# if other modules like scipy are imported. See https://forge.physik.rwth-aachen.de/issues/1128 for details.
+try:
+  import numpy
+except ImportError:
+  pass
+
+import sys
+import platform
+
+platform_system = None
+try:
+    platform_system = platform.system()
+except IOError:
+    # strange error that sometimes occurs on Mac OS X (seen on 10.6.4 with python 2.6.1)
+    # happens in platform.py _syscmd_uname('-p','')
+    # IOError: [Errno 4] Interrupted system call
+    pass
+
+# Change dlopenflags to work around 'swig::stop_iteration' bug (Swig
+# Tracker ID: 1863647), see:
+# http://sourceforge.net/tracker/index.php?func=detail&aid=1863647&group_id=1645&atid=101645
+dlopenflags = None
+if platform_system != None and 'Linux' in platform.system():
+    dlopenflags = sys.getdlopenflags()
+    if sys.version_info < (2, 5):
+        RTLD_GLOBAL = 256 # 0x00100, as dl is not available on some systems (http://bugs.python.org/issue12326#msg140061)
+        sys.setdlopenflags(dlopenflags | RTLD_GLOBAL)
+    else:
+        import ctypes
+        sys.setdlopenflags(dlopenflags | ctypes.RTLD_GLOBAL)
+
+
+import pxl.core
+import pxl.hep
+import pxl.astro
+
+#Restore dlopen flags to not change pythons default behaviour
+if dlopenflags != None:
+    sys.setdlopenflags(dlopenflags)

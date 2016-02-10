@@ -1,0 +1,11 @@
+# This is an example Makefile for PXL C++ code. Copy the
+# pxlexample.cpp and this file into a new directory, rename this file
+# into Makefile and type make to generate the shared library.
+
+all: pxl_GSLBLAS_example
+
+clean:
+	rm -rf pxl_GSLBLAS_example
+
+pxl_GSLBLAS_example: pxl_GSLBLAS_example.cc
+	g++ -o pxl_GSLBLAS_example `pkg-config 'pxl >= 3.0.0' --libs --cflags` `pkg-config 'pxl-hep >= 3.0.0' --libs --cflags` `gsl-config --cflags --libs` pxl_GSLBLAS_example.cc

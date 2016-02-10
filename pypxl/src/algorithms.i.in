@@ -1,0 +1,23 @@
+%module (package="pxl") algorithms
+
+%include std_container.i
+%{
+/* Includes the header in the wrapper code */
+#include "pxl/algorithms.hh"
+#include "pxl/hep.hh"
+#include "pxl/core.hh"
+%}
+
+%import core.i
+%import hep.i
+
+%rename(_in) in;
+%rename(_print) print;
+
+%include "pxl/core/macros.hh"
+
+%include "pxl/algorithms/AutoLayout.hh"
+
+%template(NodeVector) std::vector<pxl::Node *>;
+
+

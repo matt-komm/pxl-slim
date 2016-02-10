@@ -1,0 +1,33 @@
+//-------------------------------------------
+// Project: Physics eXtension Library (PXL) -
+//      http://vispa.physik.rwth-aachen.de/ -
+// Copyright (C) 2009-2012 Martin Erdmann   -
+//               RWTH Aachen, Germany       -
+// Licensed under a LGPL-2 or later license -
+//-------------------------------------------
+
+#ifndef PXL_MODULES_PY_SWITCH_MODULE_HH
+#define PXL_MODULES_PY_SWITCH_MODULE_HH
+#include "pxl/core/macros.hh"
+
+#include "pxl/modules/PyModule.hh"
+
+namespace pxl
+{
+/**
+ module for executing python scripts
+ */
+
+class PXL_DLL_EXPORT PySwitchModule: public PyModule
+{
+public:
+	static const std::string& getStaticType();
+	virtual const std::string& getType() const;
+	void initialize() ;
+	bool isRunnable() const;
+	bool analyse(Sink *sink) ;
+};
+
+} // namespace pxl
+
+#endif // PXL_MODULES_PY_SWITCH_MODULE_HH

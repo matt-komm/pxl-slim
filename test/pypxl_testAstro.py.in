@@ -1,0 +1,34 @@
+#! @PYTHON_EXECUTABLE@
+#-------------------------------------------
+# Project: Physics eXtension Library (PXL) -
+#      http://vispa.physik.rwth-aachen.de/ -
+# Copyright (C) 2006-2012                  -
+#               RWTH Aachen, Germany       -
+# Licensed under a LGPL-2 or later license -
+#-------------------------------------------
+import unittest
+import sys
+import os
+sys.path.insert(0,'@OUTPUT_PATH@');
+
+from pxl.astro import *
+from pxl.core import Basic3Vector
+
+class TestAstroBasicObject(unittest.TestCase):
+  def runTest(self):
+    a = AstroBasicObject()
+    b = Basic3Vector(1,0,0)
+    a.setGalacticDirectionVector(b)
+    self.assertTrue(isinstance(a.getGalacticDirectionVector(),Basic3Vector))
+    self.assertTrue(isinstance(a.getGalacticLongitude(),float))
+    self.assertTrue(isinstance(a.getGalacticLatitude(),float))
+    self.assertTrue(isinstance(a.getSuperGalacticLongitude(),float))
+    self.assertTrue(isinstance(a.getSuperGalacticLatitude(),float))
+
+class TestCoordinateTransformations(unittest.TestCase):
+  def runTest(self):
+    self.assertTrue(isinstance(CoordinateTransformations_minutesOfArc2Radian(-1,42,23),float))
+    self.assertTrue(isinstance(CoordinateTransformations_timeAngle2Radian(13,21,6.7),float))
+
+if __name__ == '__main__':
+    unittest.main()

@@ -1,0 +1,10 @@
+%module (package="pxl") xml
+
+%{
+#include "pxl/xml.hh"
+%}
+
+%import modules.i
+
+%include "pxl/xml/AnalysisXmlExport.hh"
+%include "pxl/xml/AnalysisXmlImport.hh"

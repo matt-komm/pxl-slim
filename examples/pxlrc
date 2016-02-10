@@ -1,0 +1,19 @@
+;
+; Example pxl configuration file
+;
+
+;[paths]
+; Section for additional paths
+; note that any entry can hold multiple paths
+; if multiple entries with the same name are specified, all directories
+; are used
+
+; additional paths where the analysis should look for files 
+; analysisSearchPaths = /tmp/, /foo/
+; analysisSearchPaths = /bar/
+
+; paths to be added to the python module search path (sys.path)
+; pythonModulePaths = /tmp/
+
+; directories used by the pxl plugin manager
+; pluginDirectory = /tmp

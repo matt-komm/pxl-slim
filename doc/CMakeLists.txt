@@ -1,0 +1,16 @@
+OPTION(BUILD_PYTHON_DOCSTRINGS "Build python docstrings if doxygen is available" ON)
+if(DOXYGEN_FOUND)
+	MESSAGE(STATUS "Found Doxygen")
+else()
+	MESSAGE(STATUS "Doxygen not found")
+endif()
+
+if(NOT BUILD_PYTHON_DOCSTRINGS)
+	MESSAGE(STATUS "Disabled build of python docstrings")
+endif()
+
+if(DOXYGEN_FOUND AND BUILD_PYTHON_DOCSTRINGS)
+	add_custom_target(doc)
+	add_subdirectory(pxl)
+	add_subdirectory(pypxl)
+endif()

@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: PXL HEP
+Description: Physics eXtension Library - HighEnergyPhysics Classes
+Version: @PXL_VERSION@
+URL: http://pxl.sourceforge.net
+Requires: pxl-core = @PXL_VERSION@
+Libs: -L${libdir} -lpxl-hep
+Cflags: -I${includedir}

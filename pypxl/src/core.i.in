@@ -1,0 +1,1168 @@
+
+%module(directors="1", package="pxl") core
+
+%include pxl-doxy.i
+
+%include stl.i
+%include std_set.i
+%include std_multiset.i
+%include std_map.i
+%include std_pair.i
+%include std_multimap.i
+%include std_vector.i
+%include std_string.i
+%include stdint.i
+%include std_container.i
+
+/* generic exception handler for C++ exception */
+%exception {
+   try {
+      $action
+   } catch (std::exception &e) {
+      PyErr_SetString(PyExc_RuntimeError, const_cast<char*>(e.what()));
+      return NULL;
+   }
+}
+
+
+%{
+/* Includes the header in the wrapper code */
+#include "pxl/core.hh"
+#include "simpleini/SimpleIni.h"
+#include "pxl/core/ConfigLoader.hh"
+
+/* Include numpy array interface, if available */
+#ifdef WITHNUMPY
+  #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+  #include "numpy/arrayobject.h"
+  #include "numpy/ufuncobject.h"
+#endif
+%}
+
+/* Initialize numpy array interface, if available */
+#ifdef WITHNUMPY
+%init %{
+import_array();
+import_ufunc();
+%}
+
+%pythoncode %{
+import numpy
+__WITHNUMPY = True
+%}
+
+#else
+%pythoncode %{
+__WITHNUMPY = False 
+%}
+#endif
+
+
+
+%rename(_in) in;
+%rename(_print) print;
+%ignore operator<<;
+%ignore operator>>;
+
+%pythoncode %{
+# list of all available types derived from Serializable
+typeCasts=[]
+
+def upCast(object):
+    """ cast a Serializable to its specialized type """
+    if object is None:
+        return object
+    for cast in reversed(typeCasts):
+        castedObject=cast(object)
+        if not castedObject is None:
+            return castedObject
+    return object
+    
+def getObjectsOfType(owner,type):
+    """ get objects of a given type """
+    result=[object for object in owner.getObjects() if isinstance(object,type)]
+    return tuple(result)
+def createObject(self,typ,c=None):
+    """ create object and take ownership """
+    if c!=None:
+        e=typ(c)
+    else:
+        e=typ()
+    self.insertObject(e)
+    return e
+def createIndexedObject(self,typ,i,c=None):
+    """ create object and take ownership and setting the index entry """
+    if c!=None:
+        e=typ(i)
+        self.insertObject(e,c)
+    else:
+        e=typ()
+        self.insertObject(e,i)
+    return e
+def copy(self):
+    """ python copy function using copy-constructor """
+    return type(self)(self)
+def __repr__(self):
+    """ string representation of the object """
+    return self.toString().strip("\n")
+%}
+
+/* needs to be included before all other classes */
+%include "pxl/core/macros.hh"
+
+%include "pxl/core/Stream.hh"
+
+%include "pxl/core/File.hh"
+
+# -----------------------------------------------------------------------------
+# Basic3Vector
+# -----------------------------------------------------------------------------
+
+%ignore pxl::Basic3Vector::Basic3Vector(Basic3Vector const *);
+%rename(set) pxl::Basic3Vector::operator=;
+%rename(__iadd__) pxl::Basic3Vector::operator+=;
+%rename(__isub__) pxl::Basic3Vector::operator-=;
+%rename(__imul__) pxl::Basic3Vector::operator*=;
+%rename(__idiv__) pxl::Basic3Vector::operator/=;
+%rename(__add__) pxl::Basic3Vector::operator+;
+%rename(__sub__) pxl::Basic3Vector::operator-(const Basic3Vector& vec);
+%rename(__neg__) pxl::Basic3Vector::operator-();
+%rename(vprod) pxl::Basic3Vector::operator*;
+#%rename(__truediv__) pxl::Basic3Vector::operator/;
+#%rename(__div__) pxl::Basic3Vector::operator/;
+%rename(__ne__) pxl::operator!=(const Basic3Vector&, const Basic3Vector&);
+%rename(__eq__) pxl::operator==(const Basic3Vector&, const Basic3Vector&);
+%rename(sprod) pxl::operator*(const double, const Basic3Vector&);
+%rename(sprod) pxl::operator*( const Basic3Vector&, const double);
+%include "pxl/core/Basic3Vector.hh"
+%template(Basic3VectorVector) std::vector< pxl::Basic3Vector *>;
+
+%pythoncode %{
+Basic3Vector.copy=copy
+def Basic3Vector__mul__(self,other):
+    if isinstance(other,(float,int)):
+        return sprod(self,other)
+    elif isinstance(other,Basic3Vector):
+        return self.vprod(other)
+    else:
+        raise TypeError("Basic3Vector only multiply by int, float or Basic3Vector")
+Basic3Vector.__mul__=Basic3Vector__mul__
+
+
+def Basic3Vector__str__(self):
+  return "[%E %E %E]" % (self.getX(), self.getY(), self.getZ())
+Basic3Vector.__str__ = Basic3Vector__str__
+
+%}
+%extend pxl::Basic3Vector{
+  double __getitem__(int i) const
+  {
+        return self->getElement(i);
+  }
+  void __setitem__(int i,double d)
+  {
+    self->setElement(i, d);
+  }
+  int __len__() const
+  {
+    return 3;
+  }
+ 	pxl::Basic3Vector pxl::Basic3Vector::__truediv__(int i) {
+		return (*@SWIG_SELF@ / (double)i);
+	}
+ 	pxl::Basic3Vector pxl::Basic3Vector::__truediv__(double d) {
+		return (*@SWIG_SELF@ / d);
+	}
+}
+
+
+%include "pxl/core/Core.hh"
+%include "pxl/core/Random.hh"
+%include "pxl/core/Id.hh"
+
+# -----------------------------------------------------------------------------
+# logging
+# -----------------------------------------------------------------------------
+%feature("director") pxl::LogHandler;
+%include "pxl/core/logging.hh"
+%template(__call__) pxl::Logger::operator()<std::string>;
+
+# -----------------------------------------------------------------------------
+# Serializable
+# -----------------------------------------------------------------------------
+%rename(set) pxl::Serializable::operator=;
+%include "pxl/core/Serializable.hh"
+%template(SerializableVector) std::vector< pxl::Serializable *>;
+%inline %{
+   pxl::Serializable *toSerializable(pxl::Serializable *s) {
+      return dynamic_cast<pxl::Serializable*>(s);
+   }
+%}
+%pythoncode %{
+def __eq__(self,other):
+    return hasattr(other,"getId") and self.getId()==other.getId()
+def __ne__(self,other):
+    return not hasattr(other,"getId") or self.getId()!=other.getId()
+Serializable.__eq__=__eq__
+Serializable.__ne__=__ne__
+Serializable.copy=copy
+Serializable.__repr__=__repr__
+%}
+
+# -----------------------------------------------------------------------------
+# LorentzVector
+# -----------------------------------------------------------------------------
+%ignore pxl::LorentzVector::LorentzVector(LorentzVector const *);
+%rename(set) pxl::LorentzVector::operator=;
+%rename(__iadd__) pxl::LorentzVector::operator+=;
+%rename(__isub__) pxl::LorentzVector::operator-=;
+%rename(__add__) pxl::LorentzVector::operator+;
+%rename(__sub__) pxl::LorentzVector::operator-(const LorentzVector&);
+%rename(__neg__) pxl::LorentzVector::operator-();
+%rename(__ne__) pxl::operator!=(const LorentzVector&, const LorentzVector&);
+%rename(__eq__) pxl::operator==(const LorentzVector&, const LorentzVector&);
+%include "pxl/core/LorentzVector.hh"
+%template(LorentzVectorVector) std::vector< pxl::LorentzVector *>;
+%pythoncode %{
+LorentzVector.copy=copy
+%}
+
+# -----------------------------------------------------------------------------
+# Variant
+# -----------------------------------------------------------------------------
+%ignore pxl::Variant::Variant(Variant const *);
+%ignore pxl::Variant::operator bool&;
+%ignore pxl::Variant::operator const bool&;
+%ignore pxl::Variant::operator char&;
+%ignore pxl::Variant::operator const char&;
+%ignore pxl::Variant::operator unsigned char&;
+%ignore pxl::Variant::operator const unsigned char&;
+%ignore pxl::Variant::operator int16_t&;
+%ignore pxl::Variant::operator const int16_t&;
+%ignore pxl::Variant::operator uint16_t&;
+%ignore pxl::Variant::operator const uint16_t&;
+%ignore pxl::Variant::operator int32_t&;
+%ignore pxl::Variant::operator const int32_t&;
+%ignore pxl::Variant::operator uint32_t&;
+%ignore pxl::Variant::operator const uint32_t&;
+%ignore pxl::Variant::operator int64_t&;
+%ignore pxl::Variant::operator const int64_t&;
+%ignore pxl::Variant::operator uint64_t&;
+%ignore pxl::Variant::operator const uint64_t&;
+%ignore pxl::Variant::operator std::string&;
+%ignore pxl::Variant::operator const std::string&;
+%ignore pxl::Variant::operator double&;
+%ignore pxl::Variant::operator const double&;
+%ignore pxl::Variant::operator float&;
+%ignore pxl::Variant::operator const float&;
+%ignore pxl::Variant::operator Serializable*;
+%ignore pxl::Variant::operator const Serializable*;
+%ignore pxl::Variant::operator Basic3Vector&;
+%ignore pxl::Variant::operator const Basic3Vector&;
+%ignore pxl::Variant::operator LorentzVector&;
+%ignore pxl::Variant::operator const LorentzVector&;
+%rename(set) pxl::Variant::operator=;
+%include "pxl/core/Variant.hh"
+%template(VariantVector) std::vector< pxl::Variant>;
+%template(PtlMap) std::map<std::string, pxl::Variant>;
+%template(StlPair) std::pair<std::string, pxl::Variant>;
+%pythoncode %{
+Variant.copy=copy
+def Variant_toNative(value):
+    if value is None:
+        return None
+    elif value.getType() == Variant.TYPE_NONE:
+        return None
+    elif value.getType() == Variant.TYPE_BOOL:
+        return value.toBool()
+    elif value.getType() == Variant.TYPE_CHAR:
+        return value.toChar()
+    elif value.getType() == Variant.TYPE_UCHAR:
+        return value.toUChar()
+    elif value.getType() == Variant.TYPE_INT16:
+        return value.toInt16()
+    elif value.getType() == Variant.TYPE_UINT16:
+        return value.toUInt16()
+    elif value.getType() == Variant.TYPE_INT32:
+        return value.toInt32()
+    elif value.getType() == Variant.TYPE_UINT32:
+        return value.toUInt32()
+    elif value.getType() == Variant.TYPE_INT64:
+        return value.toInt64()
+    elif value.getType() == Variant.TYPE_UINT64:
+        return value.toUInt64()
+    elif value.getType() == Variant.TYPE_STRING:
+        return value.toString()
+    elif value.getType() == Variant.TYPE_DOUBLE:
+        return value.toDouble()
+    elif value.getType() == Variant.TYPE_FLOAT:
+        return value.toFloat()
+    elif value.getType() == Variant.TYPE_SERIALIZABLE:
+        # python shall not take ownership of the serializable
+        value.thisown=0
+        return upCast(value.asSerializable())
+    elif value.getType() == Variant.TYPE_BASIC3VECTOR:
+        return value.asBasic3Vector();
+    elif value.getType() == Variant.TYPE_LORENTZVECTOR:
+        return value.asLorentzVector()
+    elif value.getType() == Variant.TYPE_VECTOR:
+        varVector = value.asVector()
+        list = []
+        for entry in varVector:
+          list.append(Variant_toNative(entry))
+        return list
+    else:
+        raise Exception('unknown type', value.getTypeName(value))
+
+def Native_toVariant(value):
+    if type(value)==type(None):
+         return Variant()
+    elif type(value)==bool:
+         return Variant.fromBool(value)
+    elif type(value)==int:
+         return Variant.fromInt32(value)
+    elif type(value)==long:
+         return Variant.fromInt64(value)
+    elif type(value)==str:
+         return Variant.fromString(value)
+    elif type(value)==float:
+         return Variant.fromDouble(value)
+    elif isinstance(value,LorentzVector):
+         return Variant.fromLorentzVector(value)
+    elif isinstance(value,Basic3Vector):
+         return Variant.fromBasic3Vector(value)
+    elif isinstance(value,Serializable):
+         return Variant.fromSerializable(value)
+    elif isinstance(value,list):
+         varVector = VariantVector()
+         for entry in value:
+           var = Native_toVariant(entry)
+           varVector.push_back(var)
+         return Variant.fromVector(varVector)
+    elif isinstance(value,Variant):
+         return value
+    elif __WITHNUMPY:
+      if isinstance(value, numpy.int8):
+           return Variant.fromInt32(int(value))
+      elif isinstance(value, numpy.int16):
+           return Variant.fromInt32(int(value))
+      elif isinstance(value, numpy.int32):
+           return Variant.fromInt32(int(value))
+      elif isinstance(value, numpy.int64):
+           return Variant.fromInt64(long(value))
+      elif isinstance(value, numpy.float16):
+           return Variant.fromDouble(float(value))
+      elif isinstance(value, numpy.float32):
+           return Variant.fromDouble(float(value))
+      elif isinstance(value, numpy.float64):
+           return Variant.fromDouble(float(value))
+      elif isinstance(value, numpy.float128):
+           return Variant.fromDouble(float(value))
+      elif isinstance(value, numpy.bool_):
+           return Variant.fromBool(bool(value))
+    raise Exception('unknown type', type(value))
+
+def Variant__str__(variant):
+  return variant.toString() 
+
+Variant.__str__ = Variant__str__
+
+%}
+
+# -----------------------------------------------------------------------------
+# UserRecords
+# -----------------------------------------------------------------------------
+%ignore pxl::UserRecords::UserRecords(UserRecords const *);
+%rename(set) pxl::UserRecords::operator=;
+%feature("shadow") pxl::UserRecordHelper::getUserRecord %{
+def getUserRecord(*args):
+    """ usage: getUserRecord(key)
+    get entry from UserRecord and transform to correct python type.
+    if the UserRecord doesn't exist throw an exception.
+    """
+    return Variant_toNative(args[0].getUserRecords().get(args[1]))
+%}
+%feature("shadow") pxl::UserRecordHelper::findUserRecord %{
+def findUserRecord(*args):
+    """ usage: findUserRecord(key)
+    get entry from userrecord with correct python type automatically.
+    return None if it doesn't exist
+    """
+    return Variant_toNative(args[0].getUserRecords().find(args[1]))
+%}
+%feature("shadow") pxl::UserRecordHelper::setUserRecord %{
+def setUserRecord(*args):
+    """ usage: setUserRecord(key, item)
+    set UserRecord entry.
+    """
+    return args[0].getUserRecords().set(args[1], Native_toVariant(args[2]))
+%}
+
+%extend pxl::UserRecordHelper {
+    const Variant* findUserRecord(const std::string &key) const
+    {
+        return @SWIG_SELF@->getUserRecords().find(key);
+    }
+};
+%include "pxl/core/UserRecord.hh"
+%template(UserRecordsVector) std::vector<pxl::UserRecords*>;
+%pythoncode %{
+UserRecords.copy=copy
+UserRecords.__repr__=__repr__
+
+def UserRecords__getitem__(*args):
+  return Variant_toNative(args[0].get(args[1]))
+UserRecords.__getitem__ = UserRecords__getitem__
+
+
+def UserRecords__setitem__(*args):
+  args[0].set(args[1], Native_toVariant(args[2]))
+UserRecords.__setitem__ = UserRecords__setitem__
+
+def UserRecords__len__(*args):
+  return args[0].size()
+UserRecords.__len__= UserRecords__len__
+
+def UserRecords__str__(self):
+  s = ''
+  for i in self.getContainer().keys():
+    s+="%s : %s\n" % (i,str(self[i]))
+  return s
+UserRecords.__str__= UserRecords__str__
+%}
+/*
+%extend pxl::UserRecords{
+  Variant __getitem__(std::string s)
+  {
+    return @SWIG_SELF@->get(s);
+  }
+  
+  void __setitem__(std::string s, Variant v)
+  {
+    @SWIG_SELF@->set(s, v);
+  }
+}
+*/
+
+
+
+# -----------------------------------------------------------------------------
+# InformationChunk
+# -----------------------------------------------------------------------------
+
+%include "pxl/core/InformationChunk.hh"
+%template(InfomationChunkVector) std::vector< pxl::InformationChunk *>;
+%inline %{
+   pxl::InformationChunk *toInformationChunk(pxl::Serializable *s) {
+      return dynamic_cast<pxl::InformationChunk*>(s);
+   }
+%}
+
+%pythoncode %{
+typeCasts+=[toInformationChunk]
+def getInformationChunks(self):
+    return self.getObjectsOfType(InformationChunk)
+InformationChunk.copy=copy
+InformationChunk.__repr__=__repr__
+%}
+
+# -----------------------------------------------------------------------------
+# Relative
+# -----------------------------------------------------------------------------
+%ignore pxl::Relative::createSelfWkPtr();
+
+%template(CopyHistory) std::map<pxl::Id, pxl::Relative*>;
+%template(CopyHistoryVector) std::vector<std::map<pxl::Id, pxl::Relative*>*>;
+
+%template(Index) std::map<std::string, pxl::Relative*>;
+%template(IndexVector) std::vector<std::map<std::string, pxl::Relative*>*>;
+%template(RelativeSet) std::set< pxl::Relative *>;
+
+%feature("shadow") pxl::Relations::getContainer %{
+def getContainer(*args):
+    """ usage: getContainer()
+    return objects in a python tuple
+    """
+    return tuple([upCast(o) for o in $action(*args)])
+%}
+%feature("shadow") pxl::Relations::getFirst %{
+def getFirst(*args):
+    """ usage: getFirst()
+    return first relative and convert to correct python type
+    """
+    return upCast($action(*args))
+%}
+%include "pxl/core/Relations.hh"
+%template(RelationsVector) std::vector<pxl::Relations*>;
+%pythoncode %{
+Relations.getObjects=Relations.getContainer
+Relations.getObjectsOfType=getObjectsOfType
+Relations.copy=copy
+%}
+
+# ------------------------------------------------------------------
+# SoftRelations
+# ------------------------------------------------------------------
+%rename(_getSoftRelativesOfTypeNoCast) getSoftRelativesOfType;
+%rename(getSoftRelativesCPP) getSoftRelatives;
+%feature("shadow") pxl::SoftRelations::getFirst %{
+def getFirst(*args):
+    """ return first relative and convert to correct python type """
+    return upCast($action(*args))
+%}
+%include "pxl/core/SoftRelations.hh"
+%template(SoftRelationsVector) std::vector<pxl::SoftRelations*>;
+%template(StringIdPair) std::pair<std::string, pxl::Id>;
+%template(StringIdMultimap) std::multimap<std::string, pxl::Id>;
+%pythoncode %{
+def getSoftRelativesOfType(self,owner, objectType = None, relationType = None):
+    s=SerializableVector()
+    if isinstance(relationType, str):
+      self.getSoftRelativesCPP(s,owner, relationType)
+    elif relationType is None:
+      self.getSoftRelativesCPP(s,owner)
+    else:
+      raise TypeError("Relationtype has to be of type <string>, not <%s>" %(type(relationType)) )
+
+    relatives=[upCast(object) for object in s]
+    #remove all realtives of other types, if objectType is given
+    if objectType is not None:
+      relatives = [object for object in relatives if isinstance(object,objectType)]
+    return tuple(relatives)
+
+
+def getSoftRelatives(self, owner, relationType=None):
+    return self.getSoftRelativesOfType(owner, objectType=None, relationType=relationType)
+SoftRelations.getSoftRelativesOfType=getSoftRelativesOfType
+SoftRelations.getSoftRelatives=getSoftRelatives
+SoftRelations.copy=copy
+SoftRelations.__repr__=__repr__
+%}
+
+
+%feature("shadow") pxl::Relative::getMother %{
+def getMother(*args):
+    """ return mother and convert to correct python type """
+    return upCast($action(*args))
+%}
+%feature("shadow") pxl::Relative::getDaughters %{
+def getDaughters(*args):
+    """ return daughters and convert to correct python type """
+    return tuple([upCast(o) for o in $action(*args)])
+%}
+%feature("shadow") pxl::Relative::getMothers %{
+def getMothers(*args):
+    """ return mothers and convert to correct python type """
+    return tuple([upCast(o) for o in $action(*args)])
+%}
+%include "pxl/core/Relative.hh"
+%template(RelativeVector) std::vector< pxl::Relative *>;
+%inline %{
+   pxl::Relative *toRelative(pxl::Serializable *s) {
+      return dynamic_cast<pxl::Relative*>(s);
+   }
+%}
+%pythoncode %{
+typeCasts+=[toRelative]
+
+def getRelatives(self):
+    return self.getObjectsOfType(Relative)
+Relative.copy=copy
+Relative.__repr__=__repr__
+%}
+
+%ignore pxl::Event::Event(Event const *);
+%feature("shadow") pxl::Event::insertObject %{
+def insertObject(*args):
+    """ usage: insertObject(owner,obj,idx="")
+    insert Object and take ownership
+    """
+    args[1].thisown=0
+    return $action(*args)
+%}
+%feature("shadow") pxl::Event::getObjects %{
+def getObjects(*args):
+    """ usage: getObjects()
+    return objects in a python tuple
+    """
+    return tuple([upCast(o) for o in $action(*args)])
+%}
+%feature("shadow") pxl::Event::getUserRecord %{
+def getUserRecord(*args):
+    """ usage: getUserRecord(key)
+    get entry from UserRecord and transform to correct python type.
+    if the UserRecord doesn't exist throw an exception.
+    """
+    return Variant_toNative(args[0].getUserRecords().get(args[1]))
+%}
+%feature("shadow") pxl::Event::findUserRecord %{
+def findUserRecord(*args):
+    """ usage: findUserRecord(key)
+    get entry from userrecord with correct python type automatically.
+    return None if it doesn't exist
+    """
+    return Variant_toNative(args[0].getUserRecords().find(args[1]))
+%}
+%feature("shadow") pxl::Event::setUserRecord %{
+def setUserRecord(*args):
+    """ usage: setUserRecord(key, item)
+    set UserRecord entry.
+    """
+    return args[0].getUserRecords().set(args[1], Native_toVariant(args[2]))
+%}
+%include "pxl/core/Event.hh"
+%template(EventVector) std::vector< pxl::Event *>;
+%inline %{
+   pxl::Event *toEvent(pxl::Serializable *s) {
+      return dynamic_cast<pxl::Event*>(s);
+   }
+%}
+%extend pxl::Event {
+    const Variant* findUserRecord(const std::string &key) const
+    {
+        return @SWIG_SELF@->getUserRecords().find(key);
+    }
+};
+%pythoncode %{
+Event.setObject=Event.insertObject
+Event.getObjectsOfType=getObjectsOfType
+
+typeCasts+=[toEvent]
+
+def getEvents(self):
+    return self.getObjectsOfType(Event)
+Event.getObjectsOfTypeRelatives=getRelatives
+Event.getRelatives=getRelatives
+Event.copy=copy
+Event.__repr__=__repr__
+%}
+
+%ignore pxl::ObjectOwner::ObjectOwner(ObjectOwner const *);
+%ignore pxl::ObjectOwner::operator=;
+%rename(increase) pxl::ObjectOwnerTypeIterator::operator++;
+%feature("shadow") pxl::ObjectOwner::insert %{
+def insert(*args):
+    """ usage: insert(owner,obj,idx="")
+    insert Object and take ownership
+    """
+    args[1].thisown=0
+    return $action(*args)
+%}
+%feature("shadow") pxl::ObjectOwner::getObjects %{
+def getObjects(*args):
+    """ usage: getObjects()
+    return objects in a python tuple
+    """
+    return tuple([upCast(o) for o in $action(*args)])
+%}
+%include "pxl/core/ObjectOwner.hh"
+%template(ObjectOwnerVector) std::vector<pxl::ObjectOwner*>;
+%template(IdRelativePair) std::pair<pxl::Id, pxl::Relative*>;
+%template(StringRelativePair) std::pair<std::string, pxl::Relative*>;
+%pythoncode %{
+ObjectOwner.set=ObjectOwner.insert
+ObjectOwner.getObjectsOfType=getObjectsOfType
+ObjectOwner.copy=copy
+%}
+
+%ignore pxl::Object::Object(Object const *);
+%feature("shadow") pxl::Object::getUserRecord %{
+def getUserRecord(*args):
+    """ usage: getUserRecord(key)
+    get entry from UserRecord and transform to correct python type.
+    if the UserRecord doesn't exist throw an exception.
+    """
+    return Variant_toNative(args[0].getUserRecords().get(args[1]))
+%}
+%feature("shadow") pxl::Object::findUserRecord %{
+def findUserRecord(*args):
+    """ usage: findUserRecord(key)
+    get entry from userrecord with correct python type automatically.
+    return None if it doesn't exist
+    """
+    return Variant_toNative(args[0].getUserRecords().find(args[1]))
+%}
+%feature("shadow") pxl::Object::setUserRecord %{
+def setUserRecord(*args):
+    """ usage: setUserRecord(key, item)
+    set UserRecord entry.
+    """
+    return args[0].getUserRecords().set(args[1], Native_toVariant(args[2]))
+%}
+%include "pxl/core/Object.hh"
+%template(ObjectVector) std::vector<pxl::Object*>;
+%extend pxl::Object {
+    const Variant* findUserRecord(const std::string &key) const
+    {
+        return @SWIG_SELF@->getUserRecords().find(key);
+    }
+};
+%pythoncode %{
+Object.copy=copy
+Object.__repr__=__repr__
+%}
+
+
+%ignore pxl::ObjectManager::ObjectManager(ObjectManager const *);
+%feature("shadow") pxl::ObjectManager::insertObject %{
+def insertObject(*args):
+    """ usage: insertObject(owner,obj,idx="")
+    insert Object and take ownership
+    """
+    args[1].thisown=0
+    $action(*args)
+%}
+%feature("shadow") pxl::ObjectManager::getObjects %{
+def getObjects(*args):
+    """ usage: getObjects()
+    return objects in a python tuple
+    """
+    return tuple([upCast(o) for o in $action(*args)])
+%}
+%include "pxl/core/ObjectManager.hh"
+%template(ObjectManagerVector) std::vector<pxl::ObjectManager*>;
+%pythoncode %{
+ObjectManager.setObject=ObjectManager.insertObject
+
+def ObjectManagerGetObjectsOfType(self,type):
+    return self.getObjectOwner().getObjectsOfType(type)
+ObjectManager.getObjectsOfType=ObjectManagerGetObjectsOfType
+ObjectManager.copy=copy
+ObjectManager.__repr__=__repr__
+%}
+
+
+
+%ignore pxl::BasicContainer::BasicContainer(BasicContainer const *);
+%feature("shadow") pxl::BasicContainer::insertObject %{
+def insertObject(*args):
+    """ usage: insertObject(owner,obj,idx="")
+    insert Object and take ownership
+    """
+    args[1].thisown=0
+    return $action(*args)
+%}
+%feature("shadow") pxl::BasicContainer::getObjects %{
+def getObjects(*args):
+    """ usage: getObjects()
+    return objects in a python tuple
+    """
+    return tuple([upCast(o) for o in $action(*args)])
+%}
+%rename(set) pxl::BasicContainer::operator=;
+%feature("shadow") pxl::BasicContainer::getUserRecord %{
+def getUserRecord(*args):
+    """ usage: getUserRecord(key)
+    get entry from UserRecord and transform to correct python type.
+    if the UserRecord doesn't exist throw an exception.
+    """
+    return Variant_toNative(args[0].getUserRecords().get(args[1]))
+%}
+%feature("shadow") pxl::BasicContainer::findUserRecord %{
+def findUserRecord(*args):
+    """ usage: findUserRecord(key)
+    get entry from userrecord with correct python type automatically.
+    return None if it doesn't exist
+    """
+    return Variant_toNative(args[0].getUserRecords().find(args[1]))
+%}
+%feature("shadow") pxl::BasicContainer::setUserRecord %{
+def setUserRecord(*args):
+    """ usage: setUserRecord(key, item)
+    set UserRecord entry.
+    """
+    return args[0].getUserRecords().set(args[1], Native_toVariant(args[2]))
+%}
+/*%ignore pxl::BasicContainer::removeObjectsOfType();*/
+%rename(removeObjectsOfTypeCPP) pxl::BasicContainer::removeObjectsOfType;
+%include "pxl/core/BasicContainer.hh"
+%template(BasicContainerVector) std::vector<pxl::BasicContainer*>;
+%template(ContainerIndex) std::map<std::string, pxl::Serializable*>;
+%inline %{
+   pxl::BasicContainer *toBasicContainer(pxl::Serializable *s) {
+      return dynamic_cast<pxl::BasicContainer*>(s);
+   }
+%}
+%extend pxl::BasicContainer {
+    const Variant* findUserRecord(const std::string &key) const
+    {
+        return @SWIG_SELF@->getUserRecords().find(key);
+    }
+ int __len__() const
+  {
+    return @SWIG_SELF@->size();
+  }
+};
+
+%pythoncode %{
+BasicContainer.setObject=BasicContainer.insertObject
+BasicContainer.getObjectsOfType=getObjectsOfType
+
+typeCasts+=[toBasicContainer]
+
+def getBasicContainers(self):
+    return self.getObjectsOfType(BasicContainer)
+BasicContainer.getRelatives=getRelatives
+BasicContainer.getInformationChunks=getInformationChunks
+BasicContainer.getBasicContainers=getBasicContainers
+BasicContainer.getEvents=getEvents
+
+def BasicContainer__removeObjectsOfType(self, typ):
+  if isinstance(typ, type):
+    return self.removeObjectsOfTypeCPP(typ.getStaticTypeId())
+  elif isinstance(typ, Id):
+    return self.removeObjectsOfTypeCPP(typ)
+  else:
+    raise TypeError("Can only handle type <pxl::Id> or type<type> derived from serializable, not"%(type(typ)))
+BasicContainer.removeObjectsOfType = BasicContainer__removeObjectsOfType
+
+def BasicContainer__getitem__(self, i):
+  return upCast(self.getObjects()[i])
+BasicContainer.__getitem__ = BasicContainer__getitem__
+
+def createBasicContainer(self,c=None):
+    return createObject(self,BasicContainer,c)
+def createEvent(self,c=None):
+    return createObject(self,Event,c)
+BasicContainer.createBasicContainer=createBasicContainer
+BasicContainer.createEvent=createEvent
+BasicContainer.copy=copy
+BasicContainer.__repr__=__repr__
+%}
+
+%include "pxl/core/Filter.hh"
+
+/*
+
+Returns the Vector as a python list - but no direct access to the
+vector:-(
+*/
+%typemap(out) double* getCArray{
+   int i;
+   $result = PyList_New(3);
+   for (i = 0; i < 3; i++) {
+     PyObject *o = PyFloat_FromDouble((double) $1[i]);
+     PyList_SetItem($result,i,o);
+   }
+}
+%typemap(in) double v[3] (double temp[3]) {
+   int i;
+   if (!PySequence_Check($input)) {
+    PyErr_SetString(PyExc_ValueError,"Expected a sequence");
+    return NULL;
+  }
+  if (PySequence_Length($input) != 3) {
+    PyErr_SetString(PyExc_ValueError,"Size mismatch. Expected 3 elements");
+    return NULL;
+  }
+  for (i = 0; i < 3; i++) {
+    PyObject *o = PySequence_GetItem($input,i);
+    if (PyNumber_Check(o)) {
+      temp[i] = (float) PyFloat_AsDouble(o);
+    } else {
+      return NULL;
+    }
+  }
+  $1 = temp;
+}
+
+# -----------------------------------------------------------------------------
+# BasicNVector
+# -----------------------------------------------------------------------------
+
+%ignore pxl::BasicNVector::BasicNVector(BasicNVector const *);
+%ignore pxl::BasicNVector::operator()(size_t);
+%ignore pxl::BasicNVector::use(size_t, double *);
+%rename(set) pxl::BasicNVector::operator=;
+%rename(__iadd__) pxl::BasicNVector::operator+=;
+%rename(__isub__) pxl::BasicNVector::operator-=;
+%rename(__imul__) pxl::BasicNVector::operator*=;
+%rename(__idiv__) pxl::BasicNVector::operator/=;
+%rename(__add__) pxl::BasicNVector::operator+;
+%rename(__sub__) pxl::BasicNVector::operator-;
+%rename(vprodn) pxl::BasicNVector::operator*;
+#%rename(__truediv__) pxl::BasicNVector::operator/;
+#%rename(__div__) pxl::BasicNVector::operator/;
+%rename(__ne__) pxl::operator!=(const BasicNVector&, const BasicNVector&);
+%rename(__eq__) pxl::operator==(const BasicNVector&, const BasicNVector&);
+%rename(sprodn) pxl::operator*(double, const BasicNVector&);
+%rename(sprodn) pxl::operator*( const BasicNVector&, double);
+%include "pxl/core/BasicNVector.hh"
+%template(BasicNVectorVector) std::vector< pxl::BasicNVector *>;
+%inline %{
+   pxl::BasicNVector *toBasicNVector(pxl::Serializable *s) {
+      return dynamic_cast<pxl::BasicNVector*>(s);
+   }
+%}
+
+%pythoncode %{
+typeCasts+=[toBasicNVector]
+
+BasicNVector.copy=copy
+BasicNVector.__repr__=__repr__
+def BasicNVector__mul__(self,other):
+    if isinstance(other,(float,int)):
+        return sprodn(self,other)
+    elif isinstance(other,BasicNVector):
+        return self.vprodn(other)
+    else:
+        raise TypeError("BasicNVector can only multiply by int, float or BasicNVector")
+BasicNVector.__mul__=BasicNVector__mul__
+
+def BasicNVector__use__(self, dataArray):
+    #keep a reference to the data array to avoid its deletion 
+    if self.useNumpyArray(dataArray):
+        self.__dataArray = dataArray
+BasicNVector.use = BasicNVector__use__
+%}
+%extend pxl::BasicNVector{
+  #ifdef WITHNUMPY
+  /* Add interface generator if numpy is available */
+    %feature("autodoc", "Returns a numpy array interface. This allows to work on the raw data with numpy methods, which provides a considerable speed up. Note that operations like resize however only change the interpretation of the data, not the shape of the BasicMatrix itself.");
+    PyObject * asNumpyArray()
+    {
+      npy_intp dims[1] = {@SWIG_SELF@->getSize()};
+      return PyArray_SimpleNewFromData(1, dims, NPY_DOUBLE, (void*)@SWIG_SELF@->getArray());
+    }
+
+    %feature("autodoc", "Uses internally the array of the provided numpy array.");
+    PyObject * useNumpyArray(PyObject *input)
+    {
+      PyArrayObject *arr = NULL;
+      PyArray_Descr *dtype = NULL;
+      int ndim = 0;
+      npy_intp dims[NPY_MAXDIMS];
+      if (PyArray_GetArrayParamsFromObject(input, NULL, 1, &dtype, &ndim, dims, &arr, NULL) < 0)
+      {
+        return NULL; 
+      }
+
+      if (arr == NULL) 
+      {
+        return NULL;
+      }
+
+      double *dataPointer = (double*) PyArray_DATA(arr);
+      int n = PyArray_DIM(arr, 0 );
+      $self->use(n, dataPointer);
+
+      // keep PyObject alive
+      //Py_INCREF(input);
+    }
+  #endif
+
+  double __getitem__(int i) const
+  {
+        return @SWIG_SELF@->getElement(i);
+  }
+  void __setitem__(int i,double d)
+  {
+    @SWIG_SELF@->setElement(i, d);
+  }
+  int __len__() const
+  {
+    return @SWIG_SELF@->getSize();
+  }
+ 	pxl::BasicNVector pxl::BasicNVector::__truediv__(int i) {
+		return (*@SWIG_SELF@ / (double)i);
+	}
+ 	pxl::BasicNVector pxl::BasicNVector::__truediv__(double d) {
+		return (*@SWIG_SELF@ / d);
+	}
+}
+
+# -----------------------------------------------------------------------------
+# BasicMatrix
+# -----------------------------------------------------------------------------
+
+%ignore pxl::BasicMatrix::BasicMatrix(BasicMatrix const *);
+%ignore pxl::BasicMatrix::operator();
+%rename(set) pxl::BasicMatrix::operator=;
+%rename(__iadd__) pxl::BasicMatrix::operator+=;
+%rename(__isub__) pxl::BasicMatrix::operator-=;
+%rename(__imul__) pxl::BasicMatrix::operator*=;
+%rename(__idiv__) pxl::BasicMatrix::operator/=;
+%rename(__add__) pxl::BasicMatrix::operator+;
+%rename(__sub__) pxl::BasicMatrix::operator-;
+%rename(__truediv__) pxl::BasicMatrix::operator/;
+%rename(__div__) pxl::BasicMatrix::operator/;
+%rename(__ne__) pxl::operator!=(const BasicMatrix&, const BasicMatrix&);
+%rename(__eq__) pxl::operator==(const BasicMatrix&, const BasicMatrix&);
+%rename(sprodm) pxl::operator*(double, const BasicMatrix&);
+%rename(sprodm) pxl::operator*( const BasicMatrix&, double);
+%rename(mprodn) pxl::operator*( const BasicMatrix&, const BasicNVector&);
+%rename(mprodv) pxl::operator*( const BasicMatrix&, const Basic3Vector&);
+%include "pxl/core/BasicMatrix.hh"
+%template(BasicMatrixVector) std::vector< pxl::BasicMatrix *>;
+%inline %{
+   pxl::BasicMatrix *toBasicMatrix(pxl::Serializable *s) {
+      return dynamic_cast<pxl::BasicMatrix*>(s);
+   }
+%}
+
+%pythoncode %{
+typeCasts+=[toBasicMatrix]
+
+BasicMatrix.copy=copy
+BasicMatrix.__repr__=__repr__
+def BasicMatrix__mul__(self,other):
+    if isinstance(other,(float,int)):
+        return sprodm(self,other)
+    elif isinstance(other,BasicNVector):
+        return mprodn(self,other)
+    elif isinstance(other,Basic3Vector):
+        return mprodv(self,other)
+    else:
+        raise TypeError("BasicMatrix can only multiply by int, float, Basic3Vector or BasicNVector")
+BasicMatrix.__mul__=BasicMatrix__mul__
+
+def BasicMatrix__getitem__(self, index):
+  i,j = index
+  return self.getElement(i,j)
+
+def BasicMatrix__setitem__(self, index, val):
+  i,j = index
+  self.setElement(i,j,val)
+
+def BasicMatrix__len__(self):
+  return self.getSize1()
+
+def BasicMatrix_shape(self):
+  return (self.getSize1(), self.getSize2())
+
+BasicMatrix.__getitem__ = BasicMatrix__getitem__
+BasicMatrix.__setitem__ = BasicMatrix__setitem__
+BasicMatrix.__len__ = BasicMatrix__len__
+BasicMatrix.shape = BasicMatrix_shape 
+%}
+
+%extend pxl::BasicMatrix{
+ 	pxl::BasicMatrix pxl::BasicMatrix::__truediv__(int i) {
+		return (*@SWIG_SELF@ / (double)i);
+	}
+ 	pxl::BasicMatrix pxl::BasicMatrix::__truediv__(double d) {
+		return (*@SWIG_SELF@ / d);
+	}
+  #ifdef WITHNUMPY
+  /* Add interface generator if numpy is available */
+    %feature("autodoc", "Returns a numpy array interface. This allows to work on the raw data with numpy methods, which provides a considerable speed up. Note that operations like resize however only change the interpretation of the data, not the shape of the BasicMatrix itself.");
+    PyObject * asNumpyArray()
+    {
+      npy_intp dims[2] = {self->getSize1(), @SWIG_SELF@->getSize2()};
+      return PyArray_SimpleNewFromData(2, dims, NPY_DOUBLE, (void*) @SWIG_SELF@->getArray());
+    }
+  #endif
+
+}
+
+# -----------------------------------------------------------------------------
+# RotationMatrix
+# -----------------------------------------------------------------------------
+
+%ignore pxl::RotationMatrix::RotationMatrix(RotationMatrix const *);
+%ignore pxl::RotationMatrix::operator();
+%rename(set) pxl::RotationMatrix::operator=;
+%rename(__iadd__) pxl::RotationMatrix::operator+=;
+%rename(__isub__) pxl::RotationMatrix::operator-=;
+%rename(__imul__) pxl::RotationMatrix::operator*=;
+%rename(__idiv__) pxl::RotationMatrix::operator/=;
+%rename(__add__) pxl::RotationMatrix::operator+;
+%rename(__sub__) pxl::RotationMatrix::operator-;
+%rename(__truediv__) pxl::RotationMatrix::operator/;
+%rename(__div__) pxl::RotationMatrix::operator/;
+%rename(__ne__) pxl::operator!=(const RotationMatrix&, const RotationMatrix&);
+%rename(__eq__) pxl::operator==(const RotationMatrix&, const RotationMatrix&);
+%rename(sprodm) pxl::operator*(double, const RotationMatrix&);
+%rename(sprodm) pxl::operator*( const RotationMatrix&, double);
+%rename(mprodn) pxl::operator*( const RotationMatrix&, const BasicNVector&);
+%rename(mprodv) pxl::operator*( const RotationMatrix&, const Basic3Vector&);
+%include "pxl/core/RotationMatrix.hh"
+%template(RotationMatrixVector) std::vector< pxl::RotationMatrix *>;
+%inline %{
+   pxl::RotationMatrix *toRotationMatrix(pxl::Serializable *s) {
+      return dynamic_cast<pxl::RotationMatrix*>(s);
+   }
+%}
+
+%pythoncode %{
+typeCasts+=[toRotationMatrix]
+
+RotationMatrix.copy=copy
+RotationMatrix.__repr__=__repr__
+def RotationMatrix__mul__(self,other):
+    if isinstance(other,(float,int)):
+        return sprodm(self,other)
+    elif isinstance(other,BasicNVector):
+        return mprodn(self,other)
+    elif isinstance(other,Basic3Vector):
+        return mprodv(self,other)
+    else:
+        raise TypeError("RotationMatrix can only multiply by int, float, Basic3Vector or BasicNVector")
+RotationMatrix.__mul__=RotationMatrix__mul__
+%}
+
+# -----------------------------------------------------------------------------
+# MessageDispatcher
+# -----------------------------------------------------------------------------
+%feature("director") pxl::MessageHandler;
+%include "pxl/core/MessageDispatcher.hh"
+
+# -----------------------------------------------------------------------------
+# Other Types, I/O
+# -----------------------------------------------------------------------------
+
+%template(StringVector) std::vector< std::string >;
+
+%include "pxl/core/ObjectFactory.hh"
+
+%include "pxl/core/ChunkReader.hh"
+
+%include "pxl/core/ChunkWriter.hh"
+
+%rename(readNextObjectNoCast) pxl::InputHandler::readNextObject;
+%rename(readPreviousObjectNoCast) pxl::InputHandler::readPreviousObject;
+%rename(seekToObjectNoCast) pxl::InputHandler::seekToObject;
+%include "pxl/core/InputHandler.hh"
+%pythoncode %{
+def readNextObject(self):
+  object=self.readNextObjectNoCast()
+  if object:
+    object=upCast(object)
+    object.thisown=1
+  return object
+def readPreviousObject(self):
+  object=self.readPreviousObjectNoCast()
+  if object:
+    object=upCast(object)
+    object.thisown=1
+  return object
+def seekToObject(self,number):
+  object=self.seekToObjectNoCast(number)
+  if object:
+    object=upCast(object)
+    object.thisown=1
+  return object
+InputHandler.readNextObject=readNextObject
+InputHandler.readPreviousObject=readPreviousObject
+InputHandler.seekToObject=seekToObject
+%}
+    
+%include "pxl/core/GenericInputHandler.hh"
+
+%include "pxl/core/InputFile.hh"
+
+%include "pxl/core/OutputHandler.hh"
+
+%include "pxl/core/GenericOutputHandler.hh"
+
+%include "pxl/core/OutputFile.hh"
+
+%include "pxl/core/PluginManager.hh"
+%template(PluginManagerVector) std::vector< pxl::PluginManager *>;
+
+%include "pxl/core/Configuration.hh"
+%include "pxl/core/ConfigLoader.hh"
+
+%pythoncode %{
+Core.initialize()
+%}

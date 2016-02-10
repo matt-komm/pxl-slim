@@ -1,0 +1,102 @@
+#! @PYTHON_EXECUTABLE@
+#-------------------------------------------
+# Project: Physics eXtension Library (PXL) -
+#      http://vispa.physik.rwth-aachen.de/ -
+# Copyright (C) 2006-2012                  -
+#               RWTH Aachen, Germany       -
+# Contact: pxl-users@lists.sourceforge.net -
+#-------------------------------------------
+import sys
+import os
+sys.path.insert(0,'@OUTPUT_PATH@');
+
+from pxl.hep import *
+from pxl.core import Event, toRelative, SerializableVector
+from pxl.algorithms import AutoLayout
+import unittest
+
+class TestOperatorsParticle(unittest.TestCase):
+  def runTest(self):
+    p1=Particle()
+    p1.setP4(1,0,1,1)
+    p2=Particle()
+    p2.setP4(0,1,0,1)
+    self.assertTrue(not p1==p2)
+    self.assertTrue(p1!=p2)
+    p1+=p2
+    self.assertTrue(((p1).getPx(),(p1).getPy())==(1,1))
+    p1-=p2
+    self.assertTrue(((p1).getPx(),(p1).getPy())==(1,0))
+
+class TestOperatorsVertex(unittest.TestCase):
+  def runTest(self):
+    x1=Vertex()
+    x1.setXYZ(1,0,1)
+    x2=Vertex()
+    x2.setXYZ(0,1,1)
+    self.assertTrue(not x1==x2)
+    self.assertTrue(x1!=x2)
+    x1+=x2
+    self.assertTrue(((x1).getX(),(x1).getY())==(1,1))
+    x1-=x2
+    self.assertTrue(((x1).getX(),(x1).getY())==(1,0))
+
+class TestSoftRelations(unittest.TestCase):
+  def runTest(self):
+    event=Event()
+    p=event.createParticle()
+    q=Particle()
+    event.insertObject(q)
+    p.linkSoft(q,"partner")
+    s1=SerializableVector()
+    p.getSoftRelations().getSoftRelatives(s1,event.getObjectOwner())
+    self.assertTrue(len(s1)==1)
+    self.assertTrue(len(p.getSoftRelations().getSoftRelativesOfType(Particle,event.getObjectOwner()))==1)
+
+class TestCasting(unittest.TestCase):
+  def runTest(self):
+    p=Particle()
+    self.assertTrue(toParticle(p)==p)
+    e=Event()
+    self.assertTrue(toParticle(e)==None)
+    self.assertTrue(toParticle(None)==None)
+
+class TestFindObject(unittest.TestCase):
+  def runTest(self):
+    e=Event()
+    p=Particle()
+    e.insertObject(p)
+    e.setIndex("hello",p)
+    self.assertTrue(e.findObject("hello")==p)
+
+class TestGettersThatReturnRelatives(unittest.TestCase):
+  def runTest(self):
+    e=Event()
+    p1=e.createParticle()
+    p2=e.createParticle()
+    p1.linkMother(p2)
+    p1.linkSoft(p2,"mother")
+    self.assertTrue(p2==p1.getMother())
+    self.assertTrue((p1,)==p2.getDaughters())
+    self.assertTrue(p2==p1.getMotherRelations().getFirst())
+    self.assertTrue(p2==p1.getSoftRelations().getFirst(e.getObjectOwner()))
+
+class TestGettersThatReturnRelatives(unittest.TestCase):
+  def runTest(self):
+    event1=Event()
+    p=event1.createParticle()
+    q=event1.createParticle()
+    p.linkMother(q)
+    self.assertTrue(p!=q)
+    self.assertTrue(not p.getMotherRelations().getFirst()!=q)
+    self.assertTrue(p.getMotherRelations().getFirst()==q)
+    self.assertTrue(toRelative(p.getMotherRelations().getFirst())==toRelative(q))
+    self.assertTrue(q in p.getMotherRelations().getContainer())
+
+class TestAutoLayout(unittest.TestCase):
+  def runTest(self):
+    autolayout=AutoLayout()
+
+
+if __name__ == '__main__':
+    unittest.main()

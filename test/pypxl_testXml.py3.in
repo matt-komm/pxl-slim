@@ -1,0 +1,38 @@
+#! @PYTHON_EXECUTABLE@
+#-------------------------------------------
+# Project: Physics eXtension Library (PXL) -
+#      http://vispa.physik.rwth-aachen.de/ -
+# Copyright (C) 2006-2012                  -
+#               RWTH Aachen, Germany       -
+# Contact: pxl-users@lists.sourceforge.net -
+#-------------------------------------------
+import sys
+import os
+sys.path.insert(0,'@OUTPUT_PATH@');
+
+import unittest
+
+import pxl.xml
+import pxl.modules
+
+
+
+class TestXml(unittest.TestCase):
+  #def setUp(self):
+  #  self.analysis = pxl.modules.Analysis()
+
+  # test if analysis can be loaded
+  def testAnalysisLoading(self):
+    analysis = pxl.modules.Analysis()
+    analysisReader = pxl.xml.AnalysisXmlImport()
+    filename = os.path.join('@CMAKE_CURRENT_SOURCE_DIR@','count.xml')
+    self.assertTrue(analysisReader.open(filename))
+    analysisReader.parseInto(analysis)
+    for module in analysis.getModules():
+      pass
+    for k,v in analysis.getUserRecords().getContainer().items():
+      pass
+
+if __name__ == '__main__':
+    unittest.main()
+

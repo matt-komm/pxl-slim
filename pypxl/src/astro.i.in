@@ -1,0 +1,228 @@
+%module (package="pxl") astro
+
+%include std_container.i
+%{
+/* Includes the header in the wrapper code */
+#include "pxl/core.hh"
+#include "pxl/astro.hh"
+%}
+
+%import core.i
+%pythoncode %{
+import pxl.core
+%}
+
+%rename(_in) in;
+%rename(_print) print;
+
+%include "pxl/core/macros.hh"
+
+%include "pxl/astro/CoordinateTransformations.hh"
+
+%ignore pxl::AstroBasicObject::AstroBasicObject(AstroBasicObject const *);
+%ignore pxl::AstroBasicObject::angularDistanceTo(AstroBasicObject const *) const;
+%include "pxl/astro/AstroBasicObject.hh"
+%template(AstroBasicObjectVector) std::vector<pxl::AstroBasicObject*>;
+%inline %{
+   pxl::AstroBasicObject *toAstroBasicObject(pxl::Serializable *s) {
+      return dynamic_cast<pxl::AstroBasicObject*>(s);
+   }
+%}
+%pythoncode %{
+pxl.core.typeCasts+=[toAstroBasicObject]
+
+def getAstroBasicObjects(self):
+    return self.getObjectsOfType(AstroBasicObject)
+AstroBasicObject.copy=pxl.core.copy
+AstroBasicObject.__repr__=pxl.core.__repr__
+%}
+
+
+/* Grab a 3 element array as a Python 3-tuple
+
+
+extern void AstroBasicObject::setVector(double[]);
+extern double* AstroBasicObject::getVector();
+%typemap(out) double [ANY] {
+   int i;
+   $result = PyList_New($1_dim0);
+   for (i = 0; i < $1_dim0; i++) {
+     PyObject *o = PyFloat_FromDouble((double) $1[i]);
+     PyList_SetItem($result,i,o);
+   }
+} 
+*/
+
+
+/*
+%typemap(out) const double * {
+ int i;
+ $result = PyList_New(3);
+ for (i = 0; i < 3; i++) {
+  PyObject *o = PyFloat_FromDouble((double) $1[i]);
+  PyList_SetItem($result,i,o);
+ }
+} 
+%newdouble* AstroBasicObject::getVector();
+*/
+%typedef unsigned int time_t;
+
+%ignore pxl::AstroObject::AstroObject(AstroObject const *);
+%ignore pxl::AstroObject::AstroObject(AstroBasicObject const *);
+%ignore pxl::AstroObject::linkSoft(AstroObject *, std::string const &);
+%ignore pxl::AstroObject::unlinkSoft(AstroObject *, std::string const &);
+%feature("shadow") pxl::AstroObject::getUserRecord %{
+def getUserRecord(*args):
+    """ usage: getUserRecord(key)
+    get entry from UserRecord and transform to correct python type.
+    if the UserRecord doesn't exist throw an exception.
+    """
+    return pxl.core.Variant_toNative(args[0].getUserRecords().get(args[1]))
+%}
+%feature("shadow") pxl::AstroObject::findUserRecord %{
+def findUserRecord(*args):
+    """ usage: findUserRecord(key)
+    get entry from userrecord with correct python type automatically.
+    return None if it doesn't exist
+    """
+    return Variant_toNative(args[0].getUserRecords().find(args[1]))
+%}
+%feature("shadow") pxl::AstroObject::setUserRecord %{
+def setUserRecord(*args):
+    """ usage: setUserRecord(key, item)
+    set UserRecord entry.
+    """
+    return args[0].getUserRecords().set(args[1], pxl.core.Native_toVariant(args[2]))
+%}
+%include "pxl/astro/AstroObject.hh"
+%template(AstroObjectVector) std::vector<pxl::AstroObject*>;
+%inline %{
+   pxl::AstroObject *toAstroObject(pxl::Serializable *s) {
+      return dynamic_cast<pxl::AstroObject*>(s);
+   }
+%}
+%extend pxl::AstroObject {
+    const Variant* findUserRecord(const std::string &key) const
+    {
+        return self->getUserRecords().find(key);
+    }
+};
+%pythoncode %{
+pxl.core.typeCasts+=[toAstroObject]
+
+def getAstroObjects(self):
+    return self.getObjectsOfType(AstroObject)
+AstroObject.copy=pxl.core.copy
+AstroObject.__repr__=pxl.core.__repr__
+%}
+
+
+%ignore pxl::UHECR::UHECR(UHECR const *);
+%include "pxl/astro/UHECR.hh"
+%template(UHECRVector) std::vector<pxl::UHECR*>;
+%inline %{
+   pxl::UHECR *toUHECR(pxl::Serializable *s) {
+      return dynamic_cast<pxl::UHECR*>(s);
+   }
+%}
+%pythoncode %{
+pxl.core.typeCasts+=[toUHECR]
+
+def getUHECRs(self):
+    return self.getObjectsOfType(UHECR)
+UHECR.copy=pxl.core.copy
+UHECR.__repr__=pxl.core.__repr__
+%}
+
+
+%ignore pxl::RegionOfInterest::RegionOfInterest(RegionOfInterest const *);
+%ignore pxl::RegionOfInterest::RegionOfInterest(AstroBasicObject const *);
+%ignore pxl::RegionOfInterest::RegionOfInterest(AstroBasicObject const *, double);
+%ignore pxl::RegionOfInterest::RegionOfInterest(AstroBasicObject const *, double, std::string const &);
+%ignore pxl::RegionOfInterest::objectInCone(AstroBasicObject const *) const;
+%ignore pxl::RegionOfInterest::linkIfObjectInCone(AstroObject *);
+%ignore pxl::RegionOfInterest::linkIfObjectInCone(AstroObject *, std::string);
+%include "pxl/astro/RegionOfInterest.hh"
+%template(RegionOfInterestVector) std::vector<pxl::RegionOfInterest*>;
+%inline %{
+   pxl::RegionOfInterest *toRegionOfInterest(pxl::Serializable *s) {
+      return dynamic_cast<pxl::RegionOfInterest*>(s);
+   }
+%}
+%pythoncode %{
+pxl.core.typeCasts+=[toRegionOfInterest]
+
+def getRegionsOfInterest(self):
+    return self.getObjectsOfType(RegionOfInterest)
+RegionOfInterest.copy=pxl.core.copy
+RegionOfInterest.__repr__=pxl.core.__repr__
+%}
+
+%ignore pxl::UHECRSource::UHECRSource(UHECRSource const *);
+%ignore pxl::UHECRSource::UHECRSource(AstroBasicObject const *);
+%ignore pxl::UHECRSource::UHECRSource(AstroBasicObject const *, double);
+%ignore pxl::UHECRSource::UHECRSource(AstroBasicObject const *, double, std::string);
+%include "pxl/astro/UHECRSource.hh"
+%template(UHECRSourceVector) std::vector<pxl::UHECRSource*>;
+%inline %{
+   pxl::UHECRSource *toUHECRSource(pxl::Serializable *s) {
+      return dynamic_cast<pxl::UHECRSource*>(s);
+   }
+%}
+%pythoncode %{
+pxl.core.typeCasts+=[toUHECRSource]
+
+def getRegionsOfInterest(self):
+    return self.getObjectsOfType(UHECRSource)
+UHECRSource.copy=pxl.core.copy
+UHECRSource.__repr__=pxl.core.__repr__
+%}
+
+
+
+
+%pythoncode %{
+def createAstroBasicObject(self,c=None):
+    return pxl.core.createObject(self,AstroBasicObject,c)
+def createIndexedAstroBasicObject(self,index,c=None):
+    return pxl.core.createIndexedObject(self,AstroBasicObject,index,c)
+def createAstroObject(self,c=None):
+    return pxl.core.createObject(self,AstroObject,c)
+def createIndexedAstroObject(self,index,c=None):
+    return pxl.core.createIndexedObject(self,AstroObject,index,c)
+def createUHECR(self,c=None):
+    return pxl.core.createObject(self,UHECR,c)
+def createIndexedUHECR(self,index,c=None):
+    return pxl.core.createIndexedObject(self,UHECR,index,c)
+def createRegionOfInterest(self,c=None):
+    return pxl.core.createObject(self,RegionOfInterest,c)
+def createIndexedRegionOfInterest(self,index,c=None):
+    return pxl.core.createIndexedObject(self,RegionOfInterest,index,c)
+def createUHECRSource(self,c=None):
+    return pxl.core.createObject(self,UHECRSource,c)
+def createIndexedUHECRSource(self,index,c=None):
+    return pxl.core.createIndexedObject(self,UHECRSource,index,c)
+
+
+
+pxl.core.BasicContainer.getAstroBasicObjects=getAstroBasicObjects
+pxl.core.BasicContainer.getAstroObjects=getAstroObjects
+pxl.core.BasicContainer.getUHECRs=getUHECRs
+pxl.core.BasicContainer.getRegionsOfInterest=getRegionsOfInterest
+pxl.core.BasicContainer.createAstroBasicObject=createAstroBasicObject
+pxl.core.BasicContainer.createIndexedAstroBasicObject=createIndexedAstroBasicObject
+pxl.core.BasicContainer.createAstroObject=createAstroObject
+pxl.core.BasicContainer.createIndexedAstroObject=createIndexedAstroObject
+pxl.core.BasicContainer.createUHECR=createUHECR
+pxl.core.BasicContainer.createIndexedUHECR=createIndexedUHECR
+pxl.core.BasicContainer.createRegionOfInterest=createRegionOfInterest
+pxl.core.BasicContainer.createIndexedRegionOfInterest=createIndexedRegionOfInterest
+pxl.core.BasicContainer.createUHECRSource=createUHECRSource
+pxl.core.BasicContainer.createIndexedUHECRSource=createIndexedUHECRSource
+%}
+
+%include "pxl/astro/Astro.hh"
+
+%pythoncode %{
+Astro.initialize()
+%}

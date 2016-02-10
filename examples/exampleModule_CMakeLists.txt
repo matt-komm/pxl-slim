@@ -1,0 +1,43 @@
+#common cmake stuff
+cmake_minimum_required (VERSION 2.6)
+project (pxl-module)
+
+#Add tghe path to the FindPXL.cmake file here - or copy it to the module
+#directory and use the line below
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
+
+#name of the pxl-module
+SET(PXLMODULENAME exampleModule)
+
+#files to be added to the module library
+add_library(${PXLMODULENAME} MODULE
+	exampleModule.cpp 
+	)
+
+#check for pxl
+FIND_PACKAGE(PXL)
+
+#insert needed plugins here
+#ADD_PXL_PLUGIN(pxl-astro)
+#ADD_PXL_PLUGIN(pxl-hep)
+ADD_PXL_PLUGIN(pxl-modules)
+
+#add additional external libraries as needed
+include_directories(
+        ${PXL_INCLUDE_DIRS}
+        )
+link_directories(
+        ${PXL_LIBRARIES}
+        )
+target_link_libraries (${PXLMODULENAME}
+        ${PXL_LIBRARIES}
+        )
+
+SET_TARGET_PROPERTIES(${PXLMODULENAME} PROPERTIES COMPILE_FLAGS -fPIC)
+
+#set install destination
+INSTALL(TARGETS ${PXLMODULENAME} LIBRARY DESTINATION
+	${PXL_PLUGIN_INSTALL_PATH})
+
+
+

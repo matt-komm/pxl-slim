@@ -1,0 +1,25 @@
+<?xml version="1.0" ?>
+<analysis file_format_version="0.3">
+  <module id="7c6ef8d8-7b79-11de-b737-00264a1470ea" name="File Input0" runIndex="0" type="File Input" xPos="48" yPos="36">
+    <option name="File names" type="string_vector">
+(zmumu_mc_10.pxlio)    </option>
+    <option name="start" type="long">
+      0
+    </option>
+    <option name="end" type="long">
+      -1
+    </option>
+  </module>
+  <module id="7c708a4a-7b79-11de-b737-00264a1470ea" name="count_script.py" type="PyAnalyse" xPos="161" yPos="29">
+    <option name="filename" type="string">
+<![CDATA[count_script.py]]>    </option>
+    <option name="script" type="string">
+<![CDATA[]]>    </option>
+    <option name="parameter" type="string">
+<![CDATA[]]>    </option>
+  </module>
+  <connection>
+    <source module="7c6ef8d8-7b79-11de-b737-00264a1470ea" name="out"/>
+    <sink module="7c708a4a-7b79-11de-b737-00264a1470ea" name="in"/>
+  </connection>
+</analysis>

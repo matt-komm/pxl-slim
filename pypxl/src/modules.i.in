@@ -1,0 +1,215 @@
+%module (package="pxl") modules
+%include std_container.i
+
+%{
+/* Includes the header in the wrapper code */
+#include "pxl/core.hh"
+#include "pxl/modules.hh"
+#include "pxl/hep.hh"
+%}
+
+%import core.i
+%import hep.i
+%pythoncode %{
+import pxl.core
+import pxl.hep
+%}
+
+%rename(_in) in;
+%rename(_print) print;
+
+%include "pxl/core/macros.hh"
+
+%feature("shadow") pxl::Analysis::getUserRecord %{
+def getUserRecord(*args):
+    """ usage: getUserRecord(key)
+    get entry from userrecord with correct python type automatically
+    """
+    return pxl.core.Variant_toNative(args[0].getUserRecords().get(args[1]))
+%}
+%feature("shadow") pxl::Analysis::setUserRecord %{
+def setUserRecord(*args):
+    """ usage: setUserRecord(key, item)
+    set UserRecord using python types automatically
+    """
+    return args[0].getUserRecords().set(args[1], pxl.core.Native_toVariant(args[2]))
+%}
+%include "pxl/modules/Analysis.hh"
+
+%feature("shadow") pxl::Module::getUserRecord %{
+def getUserRecord(*args):
+    """ usage: getUserRecord(key)
+    get entry from userrecord with correct python type automatically
+    """
+    return pxl.core.Variant_toNative(args[0].getUserRecords().get(args[1]))
+%}
+%feature("shadow") pxl::Module::setUserRecord %{
+def setUserRecord(*args):
+    """ usage: setUserRecord(key, item)
+    set UserRecord using python types automatically
+    """
+    return args[0].getUserRecords().set(args[1], pxl.core.Native_toVariant(args[2]))
+%}
+%feature("shadow") pxl::Module::setOption %{
+def setOption(*args):
+    """ usage: setOption(name, value)
+    set module option with correct python type automatically
+    """
+    if type(args[2])==bool:
+         args[0].setBooleanOption(args[1],args[2])
+    elif type(args[2]) in (int,long):
+         args[0].setLongOption(args[1],args[2])
+    elif type(args[2])==float:
+         args[0].setDoubleOption(args[1],args[2])
+    elif type(args[2])==str:
+         args[0].setStringOption(args[1],args[2])
+    elif type(args[2]) in (list,tuple):
+         args[0].setStringVectorOption(args[1],args[2])
+    else:
+         raise Exception('pxl::Module::setOption: unknown option type', type(args[2]))
+%}
+%feature("shadow") pxl::Module::getOption %{
+def getOption(*args):
+    """ usage: getOption(name)
+    get module option with correct python type automatically
+    """
+    if args[0].hasOption(args[1],OptionDescription.TYPE_BOOLEAN):
+         return args[0].getBooleanOption(args[1])
+    elif args[0].hasOption(args[1],OptionDescription.TYPE_LONG):
+         return args[0].getLongOption(args[1])
+    elif args[0].hasOption(args[1],OptionDescription.TYPE_DOUBLE):
+         return args[0].getDoubleOption(args[1])
+    elif args[0].hasOption(args[1],OptionDescription.TYPE_STRING):
+         return args[0].getStringOption(args[1])
+    elif args[0].hasOption(args[1],OptionDescription.TYPE_STRING_VECTOR):
+         return args[0].getStringVectorOption(args[1])
+    else:
+         raise Exception('pxl::Module::getOption: option not found')
+%}
+%feature("shadow") pxl::Module::addOption %{
+def addOption(*args):
+    """ usage: addOption(name, description, defaultValue, usage)
+    add module option with correct python type automatically
+    """
+    if type(args[3])==bool:
+         args[0].addBooleanOption(*args[1:])
+    elif type(args[3]) in (int,long):
+         args[0].addLongOption(*args[1:])
+    elif type(args[3])==float:
+         args[0].addDoubleOption(*args[1:])
+    elif type(args[3])==str:
+         args[0].addStringOption(*args[1:])
+    elif type(args[3]) in (list,tuple):
+         args[0].addStringVectorOption(*args[1:])
+    else:
+         raise Exception('pxl::Module::addOption: unknown option type', type(args[3]))
+%}
+%template(OptionDescriptionVector) std::vector<pxl::OptionDescription>;
+%template(SinkDescriptionVector) std::vector<pxl::SinkDescription>;
+%template(SourceDescriptionVector) std::vector<pxl::SourceDescription>;
+%template(ModuleVector) std::vector<pxl::Module *>;
+%template(ConnectionVector) std::vector<pxl::Connection *>;
+%rename(set) pxl::module_ptr::operator=;
+%feature("director") pxl::Module;
+%include "pxl/modules/Module.hh"
+
+
+%extend pxl::Module {
+	std::string getStringOption(const std::string &name) {
+		std::string value;
+		self->getOption(name, value);
+		return value;
+	}
+	std::vector<std::string> getStringVectorOption(const std::string &name) {
+		std::vector<std::string> value;
+		self->getOption(name, value);
+		return value;
+	}
+	double getDoubleOption(const std::string &name) {
+		double value;
+		self->getOption(name, value);
+		return value;
+	}
+	int64_t getLongOption(const std::string &name) {
+		int64_t value;
+		self->getOption(name, value);
+		return value;
+	}
+	bool getBooleanOption(const std::string &name) {
+		bool value;
+		self->getOption(name, value);
+		return value;
+	}
+	
+	void setStringOption(const std::string &name, const std::string &value) {
+		self->setOption(name, value);
+	}
+	void setStringVectorOption(const std::string &name, const std::vector<std::string> &value) {
+		self->setOption(name, value);
+	}
+	void setDoubleOption(const std::string &name, const double &value) {
+		self->setOption(name, value);
+	}
+	void setLongOption(const std::string &name, const int64_t &value) {
+		self->setOption(name, value);
+	}
+	void setBooleanOption(const std::string &name, const bool &value) {
+		self->setOption(name, value);
+	}
+
+	void addDoubleOption(const std::string& name, const std::string& description,
+			double defaultValue, OptionDescription::Usage usage = OptionDescription::USAGE_UNKNOWN) {
+		self->addOption(name, description, defaultValue, usage);
+	}
+	void addLongOption(const std::string& name, const std::string& description,
+			int64_t defaultValue, OptionDescription::Usage usage = OptionDescription::USAGE_UNKNOWN) {
+		self->addOption(name, description, defaultValue, usage);
+	}
+	void addStringOption(const std::string& name, const std::string& description,
+			const std::string& defaultValue, OptionDescription::Usage usage = OptionDescription::USAGE_UNKNOWN) {
+		self->addOption(name, description, defaultValue, usage);
+	}
+	void addBooleanOption(const std::string& name, const std::string& description,
+			bool defaultValue, OptionDescription::Usage usage = OptionDescription::USAGE_UNKNOWN) {
+		self->addOption(name, description, defaultValue, usage);
+	}
+	void addStringVectorOption(const std::string& name, const std::string& description,
+			const std::vector<std::string>& defaultValue, OptionDescription::Usage usage = OptionDescription::USAGE_UNKNOWN) {
+		self->addOption(name, description, defaultValue, usage);
+	}
+};
+
+%include "pxl/modules/ModuleFactory.hh"
+
+%include "pxl/modules/Modules.hh"
+
+%pythoncode %{
+Modules.initialize()
+%}
+
+%pythoncode %{
+class PythonModule(object):
+    def __init__(self):
+        self.__module=None
+    def module(self):
+        return self.__module
+    def __getattr__(self,name):
+        if name in ("isEnabled","getRunIndex","getSink","getSource",\
+                    "getSinkDescriptions","getSourceDescriptions","addSink",\
+                    "addSource","getOptionDescriptions","addOption",\
+                    "getOptionDescription","getOption","setOption","hasOption",\
+                    "hasSink","hasSource","isRunnable","getStatusMessage",\
+                    "setStatusMessage") and\
+                    hasattr(self,"__module") and hasattr(self.__module,name):
+            return getattr(self.__module,name)
+        else:
+        	raise AttributeError(str(self)+" has no attribute "+name)
+%}
+
+%include "pxl/modules/InputModule.hh"
+%include "pxl/modules/OutputModule.hh"
+%include "pxl/modules/PyAnalyseModule.hh"
+%include "pxl/modules/PyDecideModule.hh"
+%include "pxl/modules/PyGeneratorModule.hh"
+%include "pxl/modules/PyModuleModule.hh"
+%include "pxl/modules/PySwitchModule.hh"

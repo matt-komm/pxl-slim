@@ -1,0 +1,92 @@
+<?xml version='1.0' encoding='Windows-1252'?>
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+  <Product Name='PyPXL-Py${PYTHON_DOT_VERSION}-${PXLVERSION}' Id='*' UpgradeCode='A0B69F9F-F78F-459F-B4F3-C384027671D0'
+    Language='1033' Codepage='1252' Version='${PXLVERSION}' Manufacturer='VISPA Project'>
+
+    <Package Id='*' Keywords='Installer' Description="VISPA Project PyPXL Installer"
+      Comments='copyright' Manufacturer='VISPA Project'
+      InstallerVersion='100' Languages='1033' Compressed='yes' SummaryCodepage='1252' />
+
+    <Upgrade Id="A0B69F9F-F78F-459F-B4F3-C384027671D0">  
+      <UpgradeVersion Minimum="1.0.0.0" Maximum="99.0.0.0" Property="PREVIOUSVERSIONSINSTALLED" IncludeMinimum="yes" IncludeMaximum="no" />
+    </Upgrade> 
+
+    <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
+    <Property Id='DiskPrompt' Value="VISPA Project PyPXL Installation [1]" />
+
+    <Property Id='PYTHONDIR'>
+      <RegistrySearch Id='PythonRegistry' Type='raw' Root='HKLM' Key='Software\Python\PythonCore\${PYTHON_DOT_VERSION}\InstallPath' />
+    </Property>
+
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallInitialize" />
+    </InstallExecuteSequence>
+
+    <Directory Id='TARGETDIR' Name='SourceDir'>
+      <Directory Id='PYTHONDIR' Name='Python${PYTHON_VERSION}'>
+        <Directory Id='Lib' Name='Lib'>
+          <Directory Id='site_packages' Name='site-packages'>
+            <Directory Id='INSTALLDIR' Name='pxl'>
+
+              <Component Id='PyPXL' Guid='4553B0D7-494F-4F48-8EF2-FA1DF9D7D57A'>
+                <File Id='heppy' Name='hep.py' DiskId='1' Source='bin/Release/pxl/hep.py' />
+                <File Id='heppyd' Name='_hep.pyd' DiskId='1' Source='bin/Release/_hep.pyd' />
+                <File Id='hepdll' Name='pxl-hep.dll' DiskId='1' Source='bin/Release/pxl-hep.dll' />
+
+                <File Id='astropy' Name='astro.py' DiskId='1' Source='bin/Release/pxl/astro.py' />
+                <File Id='astropyd' Name='_astro.pyd' DiskId='1' Source='bin/Release/_astro.pyd' />
+                <File Id='astrodll' Name='pxl-astro.dll' DiskId='1' Source='bin/Release/pxl-astro.dll' />
+
+                <File Id='algorithmspy' Name='algorithms.py' DiskId='1' Source='bin/Release/pxl/algorithms.py' />
+                <File Id='algorithmspyd' Name='_algorithms.pyd' DiskId='1' Source='bin/Release/_algorithms.pyd' />
+                <File Id='algorithmsdll' Name='pxl-algorithms.dll' DiskId='1' Source='bin/Release/pxl-algorithms.dll' />
+
+                <File Id='healpix_py' Name='healpix.py' DiskId='1' Source='bin/Release/pxl/healpix.py' />
+                <File Id='healpix_pyd' Name='_healpix.pyd' DiskId='1' Source='bin/Release/_healpix.pyd' />
+                <File Id='healpix_dll' Name='pxl-healpix.dll' DiskId='1' Source='bin/Release/pxl-healpix.dll' />
+
+                <File Id='modulespy' Name='modules.py' DiskId='1' Source='bin/Release/pxl/modules.py' />
+                <File Id='modulespyd' Name='_modules.pyd' DiskId='1' Source='bin/Release/_modules.pyd' />
+                <File Id='modulesdll' Name='pxl-modules.dll' DiskId='1' Source='bin/Release/pxl-modules.dll' />
+
+                <File Id='corepy' Name='core.py' DiskId='1' Source='bin/Release/pxl/core.py' />
+                <File Id='corepyd' Name='_core.pyd' DiskId='1' Source='bin\Release\_core.pyd' />
+                <File Id='initpy' Name='__init__.py' DiskId='1' Source='bin\Release/pxl\__init__.py'  KeyPath='yes' />
+                <File Id='coredll' Name='pxl-core.dll' DiskId='1' Source='bin\Release\pxl-core.dll' />
+
+                <File Id='xmlpy' Name='xml.py' DiskId='1' Source='bin/Release/pxl/xml.py' />
+                <File Id='xmlpyd' Name='_xml.pyd' DiskId='1' Source='bin/Release/_xml.pyd' />
+                <File Id='xmldll' Name='pxl-xml.dll' DiskId='1' Source='bin/Release/pxl-xml.dll' />
+
+                <File Id='scriptingdll' Name='pxl-scripting.dll' DiskId='1' Source='bin/Release/pxl-scripting.dll' />
+                <File Id='pxlrun' Name='pxlrun.exe' DiskId='1' Source='bin/Release\pxlrun.exe' />
+
+                <File Id='zlibdll' Name='zlib1.dll' DiskId='1' Source='${EXTERNAL_LIBRARY_PATH}/zlib1.dll' />
+                <File Id='libeay' Name='libeay32.dll' DiskId='1' Source='${EXTERNAL_LIBRARY_PATH}/libeay32.dll' />
+                <File Id='libssh2' Name='libssh2.dll' DiskId='1' Source='${EXTERNAL_LIBRARY_PATH}/libssh2.dll' />
+                <File Id='libexpat' Name='libexpat.dll' DiskId='1' Source='${EXTERNAL_LIBRARY_PATH}/libexpat.dll' />
+
+                <Environment Id="PATH" Name="PATH" Value="[INSTALLDIR]" Permanent="yes" Part="last" Action="set" System="yes" />
+             </Component>
+
+            </Directory>
+          </Directory>
+        </Directory>
+      </Directory>
+
+      <Directory Id="ProgramMenuFolder" Name="Programs" />
+      <Directory Id="DesktopFolder" Name="Desktop" />
+    </Directory>
+    <Feature Id='Complete' Title='PyPXL ${PXLVERSION}' Description='PyPXL complete package' Display='expand' ConfigurableDirectory='PYTHONDIR' Level='1'>
+      <Feature Id='PyPXLFiles' Title='Files' Description='PyPXL files' Level='1'>
+      <ComponentRef Id='PyPXL' />
+    </Feature>
+    </Feature>
+
+    <Property Id='WIXUI_INSTALLDIR' Value='PYTHONDIR' />
+
+    <UIRef Id='WixUI_InstallDir' />
+    <UIRef Id='WixUI_ErrorProgressText' />
+
+  </Product>
+</Wix>

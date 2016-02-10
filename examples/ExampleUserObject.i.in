@@ -1,0 +1,27 @@
+
+%module "ExampleUserObject"
+
+%include std_container.i
+%import (module="pxl.core") @PXL_DATA_DIR@/swig/core.i
+
+%{
+/* Includes the header in the wrapper code */
+#include "pxl/core.hh"
+#include "pxl/core/Serializable.hh"
+#include "pxl/astro.hh"
+#include "ExampleUserObject.h"
+%}
+/*%import (module="pxl.core") core.i*/
+
+%rename(_in) in;
+%rename(_print) print;
+
+
+
+%include "ExampleUserObject.h"
+%inline %{
+   ExampleUserObject *toExampleUserObject(pxl::Serializable *s) {
+      return dynamic_cast<ExampleUserObject*>(s);
+   }
+%}
+

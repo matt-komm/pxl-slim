@@ -1,0 +1,27 @@
+#! @PYTHON_EXECUTABLE@
+#-------------------------------------------
+# Project: Physics eXtension Library (PXL) -
+#      http://vispa.physik.rwth-aachen.de/ -
+# Copyright (C) 2006-2012                  -
+#               RWTH Aachen, Germany       -
+# Contact: pxl-users@lists.sourceforge.net -
+#-------------------------------------------
+import sys
+import os
+sys.path.insert(0,'@OUTPUT_PATH@');
+
+from pxl.astro import *
+from pxl.core import Basic3Vector
+
+a = AstroBasicObject()
+b = Basic3Vector(1,0,0)
+a.setGalacticDirectionVector(b)
+assert(isinstance(a.getGalacticDirectionVector(),Basic3Vector))
+assert(isinstance(a.getGalacticLongitude(),float))
+assert(isinstance(a.getGalacticLatitude(),float))
+assert(isinstance(a.getSuperGalacticLongitude(),float))
+assert(isinstance(a.getSuperGalacticLatitude(),float))
+
+assert(isinstance(CoordinateTransformations_minutesOfArc2Radian(-1,42,23),float))
+assert(isinstance(CoordinateTransformations_timeAngle2Radian(13,21,6.7),float))
+

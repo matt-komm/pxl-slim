@@ -1,0 +1,5 @@
+INSTALL(FILES PyAnalyse.py DESTINATION ${datadir}/skeletons)
+INSTALL(FILES PyDecide.py DESTINATION ${datadir}/skeletons)
+INSTALL(FILES PyGenerator.py DESTINATION ${datadir}/skeletons)
+INSTALL(FILES PyModule.py DESTINATION ${datadir}/skeletons)
+INSTALL(FILES PySwitch.py DESTINATION ${datadir}/skeletons)

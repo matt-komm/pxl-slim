@@ -1,0 +1,58 @@
+#! @PYTHON_EXECUTABLE@
+#-------------------------------------------
+# Project: Physics eXtension Library (PXL) -
+#      http://vispa.physik.rwth-aachen.de/ -
+# Copyright (C) 2006-2012                  -
+#               RWTH Aachen, Germany       -
+# Contact: pxl-users@lists.sourceforge.net -
+#-------------------------------------------
+import sys
+import os
+sys.path.insert(0,'@OUTPUT_PATH@');
+
+import unittest
+
+import pxl.modules
+
+
+
+class TestAnalysis(unittest.TestCase):
+  def setUp(self):
+    self.analysis = pxl.modules.Analysis()
+
+
+  #Test the 'swig::stop_iteration' bug, #403 
+  def testSwigStopIterationBug(self):
+    # this will crash if bug is present
+    for module in self.analysis.getModules():
+      pass
+
+  #Test setting of module name
+  def testSetModuleName(self):
+    m = self.analysis.addModule("File Input", "TestModule", "0")
+    m.setName('Foo')
+    self.assertTrue(m.getName() == 'Foo')
+
+
+  def testAddGetModules(self):
+    self.analysis.addModule("File Input", "TestModule", "0")
+    self.assertTrue(len(self.analysis.getModules()) == 1)
+    self.analysis.addModule("File Input", "TestModule2", "0")
+    self.assertTrue(len(self.analysis.getModules()) == 2)
+
+    for module in self.analysis.getModules():
+      self.assertTrue(module.getName() in ['TestModule', 'TestModule2'])
+
+
+
+  # test setModuleOption in analysis, reproduces bug #655
+  def testSetModuleOption(self):
+    m = self.analysis.addModule("File Input", "TestModule", "0")
+    self.analysis.setModuleOption("TestModule","File names", str(["A"]))
+    fn = m.getOption("File names")
+    self.assertTrue (len(fn) == 1)
+    self.assertTrue( fn[0] == 'A')
+
+if __name__ == '__main__':
+    unittest.main()
+

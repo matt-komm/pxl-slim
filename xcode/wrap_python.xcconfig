@@ -1,0 +1,24 @@
+//
+//  wrap_python.xcconfig
+//  pxl
+//
+//
+
+PRODUCT_NAME = $(TARGETNAME)
+
+VERSION_INFO_BUILDER =
+
+// do not make a lib*.* file
+EXECUTABLE_PREFIX =
+
+// Type should be MH_BUNDLE (.so) rather than MH_DYLIB (.dylib)
+// Python seems only able to load bundle type or least to require so extension
+//MACH_O_TYPE = mh_bundle
+EXECUTABLE_EXTENSION = so
+
+// Current version and compatiblitiy version not supported by bundle type
+DYLIB_CURRENT_VERSION =
+DYLIB_COMPATIBILITY_VERSION =
+
+//BUNDLE_LOADER = /usr/bin/python
+ZERO_LINK = NO

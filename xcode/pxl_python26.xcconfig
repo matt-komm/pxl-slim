@@ -1,0 +1,10 @@
+//
+//  pxl_python26.xcconfig
+//  pxl
+//
+//  Created by Robert Fischer on 20.11.09.
+//
+
+#include "pxl_python25"
+
+PYTHON_VERSION = 2.6

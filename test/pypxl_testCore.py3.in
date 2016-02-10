@@ -1,0 +1,309 @@
+#! @PYTHON_EXECUTABLE@
+#-------------------------------------------
+# Project: Physics eXtension Library (PXL) -
+#      http://vispa.physik.rwth-aachen.de/ -
+# Copyright (C) 2006-2012                  -
+#               RWTH Aachen, Germany       -
+# Contact: pxl-users@lists.sourceforge.net -
+#-------------------------------------------
+import sys
+import os
+sys.path.insert(0,'@OUTPUT_PATH@');
+
+import unittest
+from pxl.core import *
+
+
+class TestExceptionsFromC(unittest.TestCase):
+  def runTest(self):
+    error=False
+    try:
+        r = Random()
+        r.randPowerLaw(-1,0,2)
+    except RuntimeError,e:
+        error=True
+    self.assertTrue(error)
+
+
+class TestVectorIterator(unittest.TestCase):
+# fix for vector.i "swig:stop_iteration" bug in __init__.py
+  def testEvent(self):
+    event=Event()
+    p=event.createParticle()
+    q=event.createParticle()
+    p.linkMother(q)
+    p.setUserRecord("test",0)
+    for o in event.getParticles():
+        pass
+    for o in event.getObjectOwner().getObjects():
+        pass
+    for o in p.getMotherRelations().getContainer():
+        pass
+    for k,v in p.getUserRecords().getContainer().items():
+        pass
+
+
+class TestVariant(unittest.TestCase):
+  def testPrintBasic3Vector(self):
+    v = Variant(Basic3Vector())
+    print (v)
+
+
+class TestUserRecord(unittest.TestCase):
+  def testPythonArrayInterface(self):
+    u = UserRecords()
+    self.assertEqual(len(u),0)
+    u['foo'] = 2
+    self.assertTrue(isinstance(u['foo'], int))
+    self.assertEqual(len(u),1)
+
+  def testPrintUserRecord(self):
+    # Test for bug #402
+    u = UserRecordHelper()
+    u.setUserRecord("b", Basic3Vector())
+    print (u.getUserRecords())
+
+  def testSetters(self):
+    p=UserRecordHelper()
+    q=Basic3Vector()
+    m=BasicMatrix()
+    p.setUserRecord("1",True)
+    p.setUserRecord("2",1)
+    p.setUserRecord("3",1.0)
+    p.setUserRecord("4","hallo")
+    p.setUserRecord("5",q)
+    p.setUserRecord("6",m)
+    
+    self.assertTrue(p.getUserRecord("1")==True)
+    self.assertTrue(p.getUserRecord("2")==1)
+    self.assertTrue(p.getUserRecord("3")==1.0)
+    self.assertTrue(p.getUserRecord("4")=="hallo")
+    #self.assertTrue(p.getUserRecord("5") == q)
+    #self.assertTrue(p.getUserRecord("6") == m)
+    a = p.getUserRecords().find("2")
+    self.assertTrue(1 == a.toInt32())
+
+
+
+
+
+class TestBasicContainer(unittest.TestCase):
+  def setUp(self):
+    self._basicContainer = BasicContainer()
+  def testIterator(self):
+    # Test access to basic container elemetns via python iterators,
+    # feature: #714
+    self.assertEqual(len(self._basicContainer), 0)
+    v = BasicNVector(4)
+    self._basicContainer.insertObject(v)
+    self.assertEqual(len(self._basicContainer), 1)
+    for object in self._basicContainer:
+      self.assertTrue(isinstance(object,BasicNVector))
+  def testGetObjectsOfType(self):
+    b = BasicContainer()
+    v = BasicNVector(42)
+    M = BasicMatrix(3,3)
+    b.insertObject(v)
+    b.insertObject(M)
+    vs = b.getObjectsOfType(BasicNVector)
+    Ms = b.getObjectsOfType(BasicMatrix)
+    self.assertTrue(isinstance(vs[0],BasicNVector))
+    self.assertTrue(isinstance(Ms[0],BasicMatrix))
+
+
+class TestBasic3Vector(unittest.TestCase):
+  def setUp(self):
+    self.v1=Basic3Vector(1,0,1)
+    self.v2=Basic3Vector(0,1,1)
+  def testEquality(self):
+    self.assertTrue(not self.v1==self.v2)
+  def testInequality(self):
+    self.assertTrue(self.v1!=self.v2)
+  def testAddition(self):
+    self.assertTrue(((self.v1+self.v2).getX(),(self.v1+self.v2).getY())==(1,1))
+  def testSubstraction(self):
+    self.assertTrue(((self.v1-self.v2).getX(),(self.v1-self.v2).getY())==(1,-1))
+  def testScalarProduct(self):
+    self.assertTrue(self.v1*self.v2==1)
+  def testDivisionByScalar(self):
+    self.assertTrue(((self.v1/1).getX(),(self.v1/1).getY())==(1,0))
+  def testMultiplicationWithScalar(self):
+    self.assertTrue(((self.v1*1).getX(),(self.v1*1).getY())==(1,0))
+  def testAdditionAssignment(self):
+    self.v1+=self.v2
+    self.assertTrue(((self.v1).getX(),(self.v1).getY())==(1,1))
+  def testSubstractionAssignment(self):
+    self.v1-=self.v2
+    self.assertTrue(((self.v1).getX(),(self.v1).getY())==(1,-1))
+  def testScalarMultiplicationAssignment(self):
+    self.v1*=1
+    self.assertTrue(((self.v1).getX(),(self.v1).getY())==(1,0))
+  def testScalarDivisionassignment(self):
+    self.v1/=1
+    self.assertTrue(((self.v1).getX(),(self.v1).getY())==(1,0))
+  def testSet(self):
+    self.v1.set(self.v2)
+    self.assertTrue(((self.v1).getX(),(self.v1).getY())==(0,1))
+  def testSetXYZ(self):
+    self.v1.setXYZ(1,2,3)
+    self.assertTrue((self.v1.getX(), self.v1.getY(), self.v1.getZ()) == (1,2,3))
+  def testArraySubscript(self):
+    self.v1[0] =11
+    self.v1[1] =22
+    self.v1[2] =33
+    self.assertTrue((self.v1[0], self.v1[1], self.v1[2]) == (11,22,33))
+    self.assertTrue(len(self.v1) == 3)
+
+
+class TestLorentzVector(unittest.TestCase):
+  def setUp(self):
+    self.l1=LorentzVector(1,0,1,0)
+    self.l2=LorentzVector(0,1,1,0)
+  def testEquality(self):
+    assert(not self.l1==self.l2)
+  def testInequality(self):
+    assert(self.l1!=self.l2)
+  def testAddition(self):
+    assert(((self.l1+self.l2).getX(),(self.l1+self.l2).getY())==(1,1))
+  def testSubstraction(self):
+    assert(((self.l1-self.l2).getX(),(self.l1-self.l2).getY())==(1,-1))
+  def testScalarProduct(self):
+    assert(self.l1*self.l2==1)
+  def testDivisionByScalar(self):
+    assert(((self.l1/1).getX(),(self.l1/1).getY())==(1,0))
+  def testMultiplicationWithScalar(self):
+    assert(((self.l1*1).getX(),(self.l1*1).getY())==(1,0))
+  def testAdditionAssignment(self):
+    self.l1+=self.l2
+    assert(((self.l1).getX(),(self.l1).getY())==(1,1))
+  def testSubstractionAssignment(self):
+    self.l1-=self.l2
+    assert(((self.l1).getX(),(self.l1).getY())==(1,-1))
+  def testScalarMultiplicationAssignment(self):
+    self.l1*=1
+    assert(((self.l1).getX(),(self.l1).getY())==(1,0))
+  def testScalarDivisionassignment(self):
+    assert(((self.l1).getX(),(self.l1).getY())==(1,0))
+    self.l1/=1
+  def testSet(self):
+    self.l1.set(self.l2)
+    assert(((self.l1).getX(),(self.l1).getY())==(0,1))
+
+
+
+class TestBasicNVector(unittest.TestCase):
+  def setUp(self):
+    self.v1=BasicNVector(3)
+    self.v1.setElement(0,1)
+    self.v1.setElement(1,0)
+    self.v1.setElement(2,1)
+    self.v2=BasicNVector(3)
+    self.v2.setElement(0,0)
+    self.v2.setElement(1,1)
+    self.v2.setElement(2,1)
+  def testEquality(self):
+    self.assertTrue(not self.v1==self.v2)
+  def testInequality(self):
+    self.assertTrue(self.v1!=self.v2)
+  def testAddition(self):
+    self.assertTrue(((self.v1+self.v2).getElement(0),(self.v1+self.v2).getElement(1))==(1,1))
+  def testSubstraction(self):
+    self.assertTrue(((self.v1-self.v2).getElement(0),(self.v1-self.v2).getElement(1))==(1,-1))
+  def testScalarProduct(self):
+    self.assertTrue(self.v1*self.v2==1)
+  def testDivisionByScalar(self):
+    self.assertTrue(((self.v1/1).getElement(0),(self.v1/1).getElement(1))==(1,0))
+  def testMultiplicationWithScalar(self):
+    self.assertTrue(((self.v1*1).getElement(0),(self.v1*1).getElement(1))==(1,0))
+  def testAdditionAssignment(self):
+    self.v1+=self.v2
+    self.assertTrue(((self.v1).getElement(0),(self.v1).getElement(1))==(1,1))
+  def testSubstractionAssignment(self):
+    self.v1-=self.v2
+    self.assertTrue(((self.v1).getElement(0),(self.v1).getElement(1))==(1,-1))
+  def testScalarMultiplicationAssignment(self):
+    self.v1*=1
+    self.assertTrue(((self.v1).getElement(0),(self.v1).getElement(1))==(1,0))
+  def testScalarDivisionassignment(self):
+    self.v1/=1
+    self.assertTrue(((self.v1).getElement(0),(self.v1).getElement(1))==(1,0))
+  def testSet(self):
+    self.v1.set(self.v2)
+    self.assertTrue(((self.v1).getElement(0),(self.v1).getElement(1))==(0,1))
+  def testArraySubscript(self):
+    self.v1[0] =11
+    self.v1[1] =22
+    self.v1[2] =33
+    self.assertTrue((self.v1[0], self.v1[1], self.v1[2]) == (11,22,33))
+    self.assertTrue(len(self.v1) == 3)
+    n3 = BasicNVector(17)
+    self.assertTrue(len(n3) == 17)
+    n3[3] = 15
+    self.assertTrue(n3[3] == 15)
+
+
+class TestBasicMatrix(unittest.TestCase):
+  def setUp(self):
+    self.m1=BasicMatrix(1,3)
+    self.m1.setElement(0,0,1)
+    self.m1.setElement(0,1,0)
+    self.m1.setElement(0,2,1)
+    self.m2=BasicMatrix(1,3)
+    self.m2.setElement(0,0,0)
+    self.m2.setElement(0,1,1)
+    self.m2.setElement(0,2,1)
+  def testEquality(self):
+    self.assertTrue(not (self.m1==self.m2))
+  def testInequality(self):
+    self.assertTrue(self.m1!=self.m2)
+  def testAddition(self):
+    self.assertTrue(((self.m1+self.m2).getElement(0,0),(self.m1+self.m2).getElement(0,1))==(1,1))
+  def testSubstraction(self):
+    self.assertTrue(((self.m1-self.m2).getElement(0,0),(self.m1-self.m2).getElement(0,1))==(1,-1))
+  def testMatrixBasic3VectorProduct(self):
+    v2=Basic3Vector(0,1,1)
+    self.assertTrue(((self.m1*v2).getX(),(self.m1*v2).getY())==(1,0))
+  def testMatrixBasicNVectorProduct(self):
+    n2=BasicNVector(3)
+    n2.setElement(0,0)
+    n2.setElement(1,1)
+    n2.setElement(2,1)
+    self.assertTrue((self.m1*n2).getElement(0)==1)
+
+
+  def testDivisionByScalar(self):
+    self.assertTrue(((self.m1/1).getElement(0,0),(self.m1/1).getElement(0,1))==(1,0))
+  def testScalarProduct(self):
+    self.assertTrue(((self.m1*1).getElement(0,0),(self.m1*1).getElement(0,1))==(1,0))
+  def testAdditionAssignment(self):
+    self.m1+=self.m2
+    self.assertTrue(((self.m1).getElement(0,0),(self.m1).getElement(0,1))==(1,1))
+  def testSubstractionAssignment(self):
+    self.m1-=self.m2
+    self.assertTrue(((self.m1).getElement(0,0),(self.m1).getElement(0,1))==(1,-1))
+  def testScalarMultiplicationAssignment(self):
+    self.m1*=1
+    self.assertTrue(((self.m1).getElement(0,0),(self.m1).getElement(0,1))==(1,0))
+  def testScalarDivisionassignment(self):
+    self.m1/=1
+    self.assertTrue(((self.m1).getElement(0,0),(self.m1).getElement(0,1))==(1,0))
+  def testSet(self):
+    self.m1.set(self.m2)
+    self.assertTrue(((self.m1).getElement(0,0),(self.m1).getElement(0,1))==(0,1))
+  def testArraySubscript(self):
+    # test __getitem__, __setitem__, .. interface
+    m = BasicMatrix(2,3)
+    m[1,2] = 3.1
+    self.assertTrue(m[1,2] == 3.1)
+    self.assertTrue(len(m) == 2)
+    self.assertTrue(m.shape() == (2,3))
+
+
+  class TestRotationMatrix(unittest.TestCase):
+    def testConstructor(self):
+      axis = Basic3Vector(1,0,0)
+      R = RotationMatrix(axis,3.14)
+
+if __name__ == '__main__':
+    unittest.main()
+

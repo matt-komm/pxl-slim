@@ -1,0 +1,94 @@
+%module (package="pxl") healpix 
+%include typemaps.i
+%include stdint.i
+%include std_vector.i
+%include std_string.i
+
+%include "pxl/core/macros.hh"
+%{
+/* Includes the header in the wrapper code */
+#include "pxl/core.hh"
+#include "pxl/astro.hh"
+#include "pxl/healpix.hh"
+%}
+
+%import core.i
+%pythoncode %{
+import pxl.core
+%}
+
+%rename(_in) in;
+%rename(_print) print;
+
+namespace std {
+%template(VectorDouble) vector<double>;
+%template(VectorInt) vector<int>;
+};
+
+%{
+#include "pxl/astro/HealpixMap.hh"
+%}
+
+/*rename the C++ method so it can be overriden later */
+%rename(getNeighbors_C) pxl::HealpixMap::getNeighbors;
+%rename(getPixelsInCone_C) pxl::HealpixMap::getPixelsInCone;
+%rename(getNumberOfPixels_static) pxl::HealpixMap::getNumberOfPixels(unsigned int i);
+%rename(getNumberOfPixels_nonStatic) pxl::HealpixMap::getNumberOfPixels;
+%ignore pxl::HealpixMap::HealpixMap(HealpixMap const *);
+%include "pxl/astro/HealpixMap.hh"
+%template(HealpixMapVector) std::vector<pxl::HealpixMap*>;
+%inline %{
+   pxl::HealpixMap *toHealpixMap(pxl::Serializable *s) {
+      return dynamic_cast<pxl::HealpixMap*>(s);
+   }
+%}
+
+%pythoncode %{
+pxl.core.typeCasts+=[toHealpixMap]
+
+def getHealpixMaps(self):
+    return self.getObjectsOfType(HealpixMap)
+HealpixMap.copy=pxl.core.copy
+HealpixMap.__repr__=pxl.core.__repr__
+
+def getNeighborPixelNumbers(self, pixel):
+  v=VectorInt()
+  self.getNeighbors_C(pixel,v)
+  result = [i for i in v]
+  return tuple(result)
+HealpixMap.getNeighbors= getNeighborPixelNumbers
+
+def __getPixelInCone(self, coneCenterVector, coneRadius):
+  v=VectorInt()
+  self.getPixelsInCone_C(coneCenterVector,coneRadius,v)
+  result = [i for i in v]
+  return tuple(result)
+HealpixMap.getPixelsInCone=__getPixelInCone 
+
+
+def getNumberOfPixels(self, order = None):
+  if (order == None):
+    return self.getNumberOfPixels_nonStatic()
+  elif isinstance(order, int):
+    return self.getNumberOfPixels_static(order)
+  else:
+    raise TypeError("HealpixMap::getNumberOfPixels expect integer")
+HealpixMap.getNumberOfPixels = getNumberOfPixels
+%}
+
+%pythoncode %{
+def createHealpixMap(self,c=None):
+    return pxl.core.createObject(self,HealpixMap,c)
+def createIndexedHealpixMap(self,index,c=None):
+    return pxl.core.createIndexedObject(self,HealpixMap,index,c)
+pxl.core.BasicContainer.getHealpixMaps=getHealpixMaps
+pxl.core.BasicContainer.createHealpixMap=createHealpixMap
+pxl.core.BasicContainer.createIndexedHealpixMap=createIndexedHealpixMap
+%}
+
+%include "pxl/astro/Healpix.hh"
+
+%pythoncode %{
+Healpix.initialize()
+%}
+

@@ -1,0 +1,15 @@
+# This is an example Makefile for PXL C++ Plugins. Copy the
+# examplePlugin.cpp and this file into a new directory, rename this file
+# into Makefile and type make to generate the shared library.
+
+all: examplePlugin.so
+
+clean:
+	rm -rf examplePlugin.so
+
+install: examplePlugin.so
+	mkdir -p $(HOME)/.pxl-3.0/plugins
+	cp examplePlugin.so $(HOME)/.pxl-3.0/plugins 
+
+examplePlugin.so: examplePlugin.cpp
+	g++ -shared -fPIC -o examplePlugin.so `pkg-config 'pxl-core >= 3.0.0 pxl-modules >= 3.0.0' --libs --cflags` examplePlugin.cpp

@@ -1,0 +1,88 @@
+
+import sys
+sys.path.insert(0,'@OUTPUT_PATH@');
+import os
+
+import tempfile
+from pxl import healpix
+from pxl import core
+
+import unittest
+
+logger = core.Logger('Test python healpix')
+
+class TestHealpix(unittest.TestCase):
+  def testElementSetters(self):
+    m = healpix.HealpixMap(6)
+    m.setElement(4,5.)
+    self.assertEqual(m.getElement(4) , 5.)
+
+  def testGetNeighbors(self):
+    m = healpix.HealpixMap(6)
+    n = m.getNeighbors(2)
+    self.assertTrue(isinstance(n,tuple))
+    self.assertTrue(isinstance(n[0],int))
+
+    self.assertEqual(m.getNumberOfPixels(), m.getSize())
+
+  def testSerealization(self):
+    m = healpix.HealpixMap(6)
+    fname = tempfile.mktemp(suffix='.pxlio')
+    ofile = core.OutputFile(fname)
+    b = core.BasicContainer()
+    b.setObject(m)
+    ofile.writeBasicContainer(b)
+    ofile.close()
+
+    ifile = core.InputFile(fname)
+    bs = ifile.readNextObject()
+    h = bs.getObjectsOfType(healpix.HealpixMap)
+    self.assertTrue(isinstance(h[0], healpix.HealpixMap))
+    ifile.close()
+    os.unlink(fname)
+
+  def testGetPixelInCones(self):
+    m = healpix.HealpixMap(6)
+    v = core.Basic3Vector(0,0,1)
+    pixs = m.getPixelsInCone(v,0.25)
+    self.assertTrue(isinstance(pixs,tuple))
+
+  def testHealpyCompatibility(self):
+    try:
+      import healpy
+    except ImportError:
+      logger(LOG_LEVEL_INFO, "Not checking compatibility with healpy as it isn't available")
+      return
+    hpm = healpix.HealpixMap(6)
+    nside = healpy.npix2nside(hpm.getNumberOfPixels())
+
+    for pxlIdx in xrange(0, hpm.getNumberOfPixels()):
+      v = hpm.pixel2Vector(pxlIdx)
+      hpIdx = healpy.vec2pix(nside, v.getX(),v.getY() , v.getZ(),
+        nest=False)
+      self.assertEqual(hpIdx, pxlIdx)
+
+  def testHealpyCompatibilityDirection(self):
+    try:
+      import healpy
+    except ImportError:
+      logger(LOG_LEVEL_INFO, "Not checking compatibility with healpy as it isn't available")
+      return
+    hpm = healpix.HealpixMap(6)
+    nside = healpy.npix2nside(hpm.getNumberOfPixels())
+
+    for pxlIdx in xrange(0, hpm.getNumberOfPixels()):
+      a = hpm.pixel2Vector(pxlIdx)
+      b = healpy.pix2vec(nside, pxlIdx)
+      scalarProduct = a[0]*b[0] + a[1]*b[1] + a[2] * b[2]
+
+      self.assertTrue(abs(scalarProduct -1) < 1E-8 )
+
+
+
+
+
+if __name__ == '__main__':
+    unittest.main()
+
+
