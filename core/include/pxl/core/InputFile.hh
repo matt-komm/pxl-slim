@@ -56,13 +56,13 @@ public:
 		_stream.open(filename.c_str(), OpenRead);
 		if (_stream.isBad())
 		{
-			for (unsigned int i = 0; (i < 21) and _stream.isBad(); ++i)
+			for (unsigned int i = 0; (i < 51) and _stream.isBad(); ++i)
 			{
 			    std::this_thread::sleep_for(std::chrono::seconds(10+10*i));
 			    _stream.close();
 		        _stream.clear();
 		        reset();
-		        PXL_LOG_INFO << "Try again ("<<i<<"/"<<"20) opening file " << filename;
+		        PXL_LOG_INFO << "Try again ("<<i<<"/"<<"50) opening file " << filename;
 		        _stream.open(filename.c_str(), OpenRead);
 		    }
 		    if (_stream.isBad())

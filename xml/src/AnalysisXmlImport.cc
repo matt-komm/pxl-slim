@@ -107,10 +107,10 @@ bool AnalysisXmlImport::open(const std::string &filename)
 
 	file = fopen(filename.c_str(), "r");
 	
-	for (unsigned int i = 0; (i < 21) and (file == 0); ++i)
+	for (unsigned int i = 0; (i < 51) and (file == 0); ++i)
 	{
 	    std::this_thread::sleep_for(std::chrono::seconds(10+10*i));
-	    logger(LOG_LEVEL_INFO,"Try again (",i,"/20) opening file ",filename);
+	    logger(LOG_LEVEL_INFO,"Try again (",i,"/50) opening file ",filename);
 	    file = fopen(filename.c_str(), "r");
 	}
 	if (file == 0)
