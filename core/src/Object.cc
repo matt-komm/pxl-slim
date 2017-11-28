@@ -36,12 +36,12 @@ std::ostream& pxl::Object::print(int level, std::ostream& os, int pan) const
 	return os;
 }
 
-std::ostream& pxl::Object::printContent(int level, std::ostream& os, int pan) const
+std::ostream* pxl::Object::printContent(int level, std::ostream& os, int pan) const
 {
 	os << "WorkFlag: " << _workflag << ", locked: " << _locked;
 	os << std::endl;
 	getUserRecords().print(level, os, pan);
-	return os;
+	return &os;
 }
 
 

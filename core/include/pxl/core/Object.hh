@@ -102,7 +102,7 @@ public:
 	virtual std::ostream& print(int level = 1, std::ostream& os = std::cout,
 			int pan = 0) const;
 
-	virtual std::ostream& printContent(int level = 1, std::ostream& os =
+	virtual std::ostream* printContent(int level = 1, std::ostream& os =
 			std::cout, int pan = 0) const;
 
 	virtual WkPtrBase* createSelfWkPtr()
